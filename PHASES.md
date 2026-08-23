@@ -19,13 +19,13 @@ Work should be committed in small, focused commits. Completed phase work should 
 
 **Goal:** Convert the idea into a precise, testable specification before selecting implementation details.
 
-| Member | Owner | Assignment |
-|---:|---|---|
-| 1 | Sahite | Define prototype boundaries, system context, terminology, success criteria, and non-goals. |
-| 2 | Riya | Validate ML-DSA variants, liboqs capabilities, expected key/signature sizes, and hardware constraints. |
-| 3 | Teja | Draft registration/login API contracts, challenge lifecycle, error model, and trust boundaries. |
-| 4 | Aashray | Define vault, PIN, device identity, credential lifecycle, and user-interaction requirements. |
-| 5 | Jishnu | Create the threat model, research metrics, test strategy, risk register, and experiment methodology. |
+| Workstream | Assignment |
+|---|---|
+| Architecture and scope | Define prototype boundaries, system context, terminology, success criteria, and non-goals. |
+| Cryptography and hardware | Validate ML-DSA variants, liboqs capabilities, expected key/signature sizes, and hardware constraints. |
+| Backend and protocol | Draft registration/login API contracts, challenge lifecycle, error model, and trust boundaries. |
+| Authenticator and vault | Define vault, PIN, device identity, credential lifecycle, and user-interaction requirements. |
+| Security, QA, and research | Create the threat model, research metrics, test strategy, risk register, and experiment methodology. |
 
 ### Outputs
 
@@ -48,11 +48,11 @@ The team can explain exactly what QuantumKey claims to protect, what it does not
 
 ### Team focus
 
-- **Sahite:** module boundaries, dependency direction, data flows, and architecture decisions.
-- **Riya:** reproducible ML-DSA keygen/sign/verify tests and the initial signing-backend contract.
-- **Teja:** FastAPI, SQLAlchemy, PostgreSQL, binary storage, and transaction experiments.
-- **Aashray:** SQLite vault encryption, PIN-derived key, and credential lookup experiments.
-- **Jishnu:** validation checklist, cross-platform reproducibility, measurements, and blocker tracking.
+- **Architecture and scope:** module boundaries, dependency direction, data flows, and architecture decisions.
+- **Cryptography and hardware:** reproducible ML-DSA keygen/sign/verify tests and the initial signing-backend contract.
+- **Backend and protocol:** FastAPI, SQLAlchemy, PostgreSQL, binary storage, and transaction experiments.
+- **Authenticator and vault:** SQLite vault encryption, PIN-derived key, and credential lookup experiments.
+- **Security, QA, and research:** validation checklist, cross-platform reproducibility, measurements, and blocker tracking.
 
 ### Outputs
 
@@ -73,11 +73,11 @@ The selected libraries work reproducibly, or all limitations and required altern
 
 ### Team focus
 
-- **Sahite:** protocol versioning, canonical signed-message format, and integration review.
-- **Riya:** algorithm identifiers, public-key validation, and cryptographic error behavior.
-- **Teja:** FastAPI structure, migrations, models, and registration/login endpoints.
-- **Aashray:** minimal authenticator-side API client.
-- **Jishnu:** backend tests, test database, fixtures, and continuous-integration plan.
+- **Architecture and scope:** protocol versioning, canonical signed-message format, and integration review.
+- **Cryptography and hardware:** algorithm identifiers, public-key validation, and cryptographic error behavior.
+- **Backend and protocol:** FastAPI structure, migrations, models, and registration/login endpoints.
+- **Authenticator and vault:** minimal authenticator-side API client.
+- **Security, QA, and research:** backend tests, test database, fixtures, and continuous-integration plan.
 
 ### Outputs
 
@@ -110,11 +110,11 @@ successful authentication
 
 ### Team focus
 
-- **Sahite:** integration ownership and protocol consistency.
-- **Riya:** software ML-DSA backend and crypto instrumentation.
-- **Teja:** server registration/login verification and binding checks.
-- **Aashray:** minimal registration/login CLI.
-- **Jishnu:** end-to-end, tampering, replay, negative, and baseline performance tests.
+- **Architecture and scope:** integration ownership and protocol consistency.
+- **Cryptography and hardware:** software ML-DSA backend and crypto instrumentation.
+- **Backend and protocol:** server registration/login verification and binding checks.
+- **Authenticator and vault:** minimal registration/login CLI.
+- **Security, QA, and research:** end-to-end, tampering, replay, negative, and baseline performance tests.
 
 ### Completion gate
 
@@ -126,11 +126,11 @@ Valid registration and login succeed repeatedly. Altered signatures, altered mes
 
 ### Team focus
 
-- **Sahite:** credential lifecycle, recovery, deletion, and security review.
-- **Riya:** key serialization, memory exposure, and crypto-storage review.
-- **Teja:** server-side credential/device management and revocation support.
-- **Aashray:** encrypted SQLite vault, PIN unlock, device identity, and multiple credentials.
-- **Jishnu:** wrong-PIN, corruption, migration, concurrency, and secret-logging tests.
+- **Architecture and scope:** credential lifecycle, recovery, deletion, and security review.
+- **Cryptography and hardware:** key serialization, memory exposure, and crypto-storage review.
+- **Backend and protocol:** server-side credential/device management and revocation support.
+- **Authenticator and vault:** encrypted SQLite vault, PIN unlock, device identity, and multiple credentials.
+- **Security, QA, and research:** wrong-PIN, corruption, migration, concurrency, and secret-logging tests.
 
 ### Outputs
 
@@ -151,11 +151,11 @@ Disk inspection reveals no plaintext PIN or private key, wrong PINs fail safely,
 
 ### Team focus
 
-- **Sahite:** architecture/security review and risk prioritization.
-- **Riya:** ML-DSA-44/65/87 measurements and classical comparison adapters.
-- **Teja:** audit events, rate limiting, request limits, and PostgreSQL hardening.
-- **Aashray:** PIN sessions, credential selection, and safe local configuration.
-- **Jishnu:** Docker, CI, load testing, database-growth tests, and reproducible reports.
+- **Architecture and scope:** architecture/security review and risk prioritization.
+- **Cryptography and hardware:** ML-DSA-44/65/87 measurements and classical comparison adapters.
+- **Backend and protocol:** audit events, rate limiting, request limits, and PostgreSQL hardening.
+- **Authenticator and vault:** PIN sessions, credential selection, and safe local configuration.
+- **Security, QA, and research:** Docker, CI, load testing, database-growth tests, and reproducible reports.
 
 ### Measurements
 
@@ -176,11 +176,11 @@ A clean supported machine can reproduce the system and its benchmark results by 
 
 ### Team focus
 
-- **Sahite:** ensure GUI boundaries preserve the service architecture.
-- **Riya:** review signing approvals and prevent silent authorization.
-- **Teja:** supply only the server APIs genuinely required by the interface.
-- **Aashray:** implement the PySide6 unlock, approval, registration, and credential-management UI.
-- **Jishnu:** usability, accessibility, packaging, and regression testing.
+- **Architecture and scope:** ensure GUI boundaries preserve the service architecture.
+- **Cryptography and hardware:** review signing approvals and prevent silent authorization.
+- **Backend and protocol:** supply only the server APIs genuinely required by the interface.
+- **Authenticator and vault:** implement the PySide6 unlock, approval, registration, and credential-management UI.
+- **Security, QA, and research:** usability, accessibility, packaging, and regression testing.
 
 ### Completion gate
 
@@ -192,11 +192,11 @@ The GUI uses the same tested application services as the CLI and contains no dup
 
 ### Team focus
 
-- **Sahite:** host-token protocol, capability negotiation, and versioning.
-- **Riya:** USB hardware backend, key handles, ML-DSA hardware integration, and hardware benchmarks.
-- **Teja:** verify that the existing server protocol remains compatible.
-- **Aashray:** device discovery, selection, status, timeout, and fallback behavior.
-- **Jishnu:** hardware/software comparisons, transport tests, fault tests, and research reporting.
+- **Architecture and scope:** host-token protocol, capability negotiation, and versioning.
+- **Cryptography and hardware:** USB hardware backend, key handles, ML-DSA hardware integration, and hardware benchmarks.
+- **Backend and protocol:** verify that the existing server protocol remains compatible.
+- **Authenticator and vault:** device discovery, selection, status, timeout, and fallback behavior.
+- **Security, QA, and research:** hardware/software comparisons, transport tests, fault tests, and research reporting.
 
 ### Possible later extensions
 
