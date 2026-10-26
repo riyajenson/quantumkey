@@ -7,10 +7,12 @@ import socket
 import subprocess
 import sys
 import time
+from uuid import uuid4
 from pathlib import Path
 
 import httpx
 import pytest
+from sqlalchemy.engine import make_url
 
 from phase2.signing_backend import SoftwareMLDSABackend
 from phase2.vault import CredentialVault, SQLiteCredentialVault, VaultUnlockError
@@ -28,58 +30,99 @@ def _unused_port() -> int:
 
 @pytest.fixture
 def api(tmp_path: Path):
-    port = _unused_port()
+    explicit_test_url = os.environ.get("QK_TEST_DATABASE_URL")
+    if explicit_test_url:
+        parsed_url = make_url(explicit_test_url)
+        if (
+            parsed_url.drivername != "postgresql+psycopg"
+            or parsed_url.host not in {"localhost", "127.0.0.1", "::1"}
+            or not (parsed_url.database or "").startswith("qk_test_")
+        ):
+            raise ValueError(
+                "QK_TEST_DATABASE_URL must target a loopback PostgreSQL database "
+                "whose name starts with qk_test_"
+            )
+        database_url = explicit_test_url
+    else:
+        database_url = "sqlite:///" + (tmp_path / "validation.sqlite3").as_posix()
     env = os.environ.copy()
-    env["QK_VALIDATION_DATABASE"] = str(tmp_path / "validation.sqlite3")
+    env["QK_DATABASE_URL"] = database_url
+    env.pop("QK_TEST_DATABASE_URL", None)
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
-    process = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "phase2.validation_service:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-            "--log-level",
-            "error",
-        ],
-        cwd=ROOT,
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    base_url = f"http://127.0.0.1:{port}"
-    try:
-        deadline = time.monotonic() + 20
-        while time.monotonic() < deadline:
-            if process.poll() is not None:
-                raise RuntimeError(f"validation API exited: {process.stderr.read()}")
+
+    class RunningApi:
+        def __init__(self) -> None:
+            self.process: subprocess.Popen[str] | None = None
+            self.url = ""
+            self.database_dialect = make_url(database_url).get_backend_name()
+            self.start()
+
+        def start(self) -> None:
+            port = _unused_port()
+            self.url = f"http://127.0.0.1:{port}"
+            self.process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                    "phase2.validation_service:app",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(port),
+                    "--log-level",
+                    "error",
+                ],
+                cwd=ROOT,
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
             try:
-                response = httpx.get(f"{base_url}/health", timeout=0.25)
-                if response.status_code == 200:
-                    break
-            except httpx.HTTPError:
-                time.sleep(0.1)
-        else:
-            raise TimeoutError("validation API did not become healthy")
-        yield base_url
+                deadline = time.monotonic() + 20
+                while time.monotonic() < deadline:
+                    if self.process.poll() is not None:
+                        details = self.process.stderr.read()
+                        raise RuntimeError(f"validation API exited: {details}")
+                    try:
+                        response = httpx.get(f"{self.url}/health", timeout=0.25)
+                        if response.status_code == 200:
+                            return
+                    except httpx.HTTPError:
+                        time.sleep(0.1)
+                raise TimeoutError("validation API did not become healthy")
+            except Exception:
+                self.stop()
+                raise
+
+        def stop(self) -> None:
+            if self.process is None:
+                return
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+            if self.process.stderr:
+                self.process.stderr.close()
+            self.process = None
+
+        def restart(self) -> None:
+            self.stop()
+            self.start()
+
+    service = RunningApi()
+    try:
+        yield service
     finally:
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
-        if process.stderr:
-            process.stderr.close()
+        service.stop()
 
 
 @pytest.mark.parametrize("algorithm", ALGORITHMS)
 def test_authenticator_registers_unlocks_signs_and_server_verifies(
-    api: str, algorithm: str, tmp_path: Path
+    api, algorithm: str, tmp_path: Path
 ):
     backend = SoftwareMLDSABackend()
     public_key, private_key = backend.generate_keypair(algorithm)
@@ -100,11 +143,17 @@ def test_authenticator_registers_unlocks_signs_and_server_verifies(
     with pytest.raises(VaultUnlockError):
         vault.get("credential-1", "research-pin")
 
-    credential_id = f"device-{algorithm.lower()}"
+    credential_id = f"device-{algorithm.lower()}-{uuid4().hex}"
     message = b"QuantumKey phase 2 end-to-end validation"
     signature = backend.sign(algorithm, recovered_private_key, message)
 
-    with httpx.Client(base_url=api, timeout=5) as client:
+    with httpx.Client(base_url=api.url, timeout=5) as client:
+        health = client.get("/health")
+        assert health.json() == {
+            "status": "ok",
+            "database": api.database_dialect,
+        }
+
         registered = client.post(
             "/credentials",
             json={
@@ -118,6 +167,20 @@ def test_authenticator_registers_unlocks_signs_and_server_verifies(
         persisted = client.get(f"/credentials/{credential_id}")
         assert persisted.status_code == 200, persisted.text
         assert base64.b64decode(persisted.json()["public_key"]) == public_key
+
+        duplicate_public_key, _ = backend.generate_keypair(algorithm)
+        duplicate = client.post(
+            "/credentials",
+            json={
+                "credential_id": credential_id,
+                "algorithm": algorithm,
+                "public_key": base64.b64encode(duplicate_public_key).decode("ascii"),
+            },
+        )
+        assert duplicate.status_code == 409
+        preserved = client.get(f"/credentials/{credential_id}")
+        assert preserved.status_code == 200, preserved.text
+        assert base64.b64decode(preserved.json()["public_key"]) == public_key
 
         accepted = client.post(
             "/verify",
@@ -141,6 +204,22 @@ def test_authenticator_registers_unlocks_signs_and_server_verifies(
         )
         assert rejected.status_code == 200, rejected.text
         assert rejected.json() == {"valid": False}
+
+    api.restart()
+    with httpx.Client(base_url=api.url, timeout=5) as client:
+        after_restart = client.get(f"/credentials/{credential_id}")
+        assert after_restart.status_code == 200, after_restart.text
+        assert base64.b64decode(after_restart.json()["public_key"]) == public_key
+        verified_after_restart = client.post(
+            "/verify",
+            json={
+                "credential_id": credential_id,
+                "message": base64.b64encode(message).decode("ascii"),
+                "signature": base64.b64encode(signature).decode("ascii"),
+            },
+        )
+        assert verified_after_restart.status_code == 200
+        assert verified_after_restart.json() == {"valid": True}
 
     assert private_key not in vault_path.read_bytes()
     assert b"research-pin" not in vault_path.read_bytes()

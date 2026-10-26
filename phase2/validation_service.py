@@ -17,14 +17,17 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 
 def _database_url() -> str:
+    configured_url = os.environ.get("QK_DATABASE_URL")
+    if configured_url:
+        return configured_url
     path = Path(os.environ.get("QK_VALIDATION_DATABASE", "phase2-validation.sqlite3"))
     path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{path.as_posix()}"
 
 
-engine = create_engine(
-    _database_url(), connect_args={"check_same_thread": False}
-)
+database_url = _database_url()
+connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+engine = create_engine(database_url, connect_args=connect_args)
 
 
 class Base(DeclarativeBase):
@@ -71,7 +74,9 @@ app = FastAPI(title="QuantumKey Phase 2 validation only", lifespan=lifespan)
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    with engine.connect() as connection:
+        connection.exec_driver_sql("SELECT 1")
+    return {"status": "ok", "database": engine.dialect.name}
 
 
 @app.post("/credentials", status_code=status.HTTP_201_CREATED)

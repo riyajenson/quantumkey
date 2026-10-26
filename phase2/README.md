@@ -18,11 +18,12 @@ The HTTP E2E scenario starts a separate FastAPI process and exercises an authent
 3. Reopen the vault, unlock the private key, and confirm wrong PINs and modified algorithm metadata fail.
 4. Send only the public key to the FastAPI service and persist it as a SQLAlchemy binary field in SQLite.
 5. Sign a message with the unlocked private key and have the service verify it using the database-loaded public key.
-6. Confirm modified messages fail verification and private-key bytes are absent from the vault file and API response.
+6. Confirm duplicate registration rolls back without replacing the stored key, restart the API, and verify that the record and signature still work.
+7. Confirm modified messages fail verification and private-key bytes are absent from the vault file and API response.
 
 The service and vault are intentionally minimal. They do not implement the Phase 3 protocol, challenge expiry, replay protection, authentication, or production schema/migrations.
 
-The SQLite API/database experiment is complete. The Phase 2 PostgreSQL validation gate remains open because the installed Docker client cannot reach its `desktop-linux` daemon, and no local PostgreSQL service or client is installed. Before selecting PostgreSQL, rerun the HTTP E2E flow against PostgreSQL and verify transaction rollback/commit, binary key round-trip, duplicate-key conflict handling, and persistence after a service restart.
+The HTTP E2E flow passed against both SQLite and PostgreSQL 17.11. The PostgreSQL run also covered transaction commit and duplicate-key rollback using a different public key, binary key round-trip, and persistence after a service restart. Regular `pytest` runs always use isolated SQLite files and ignore ambient `QK_DATABASE_URL`; PostgreSQL requires an explicit loopback `QK_TEST_DATABASE_URL` whose database name begins with `qk_test_`. Run it with [the PostgreSQL E2E script](run_postgres_e2e.ps1); the script starts a temporary container using a pinned image digest and stops only that container afterward.
 
 Run the whole E2E suite from the repository root:
 
