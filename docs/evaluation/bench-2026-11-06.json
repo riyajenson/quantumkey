@@ -1,0 +1,155 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.10",
+  "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+  "note": "in-process HTTP (no network); unoptimized liboqs build on Windows",
+  "results": [
+    {
+      "algorithm": "ML-DSA-44",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 1312,
+        "signature": 2420
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.525,
+          "mean_ms": 0.502,
+          "p95_ms": 0.686
+        },
+        "sign": {
+          "median_ms": 2.519,
+          "mean_ms": 2.569,
+          "p95_ms": 5.801
+        },
+        "verify": {
+          "median_ms": 0.62,
+          "mean_ms": 0.619,
+          "p95_ms": 0.834
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 634.838,
+          "mean_ms": 641.958,
+          "p95_ms": 787.251
+        },
+        "login_end_to_end": {
+          "median_ms": 328.138,
+          "mean_ms": 336.865,
+          "p95_ms": 412.15
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 264.743,
+          "mean_ms": 266.094,
+          "p95_ms": 281.299
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 5304,
+        "register_response_total": 290,
+        "login_request_total": 3354,
+        "login_response_total": 352
+      },
+      "server_db_bytes_per_credential": 2458
+    },
+    {
+      "algorithm": "ML-DSA-65",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 1952,
+        "signature": 3309
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.963,
+          "mean_ms": 0.999,
+          "p95_ms": 1.518
+        },
+        "sign": {
+          "median_ms": 3.346,
+          "mean_ms": 3.632,
+          "p95_ms": 11.6
+        },
+        "verify": {
+          "median_ms": 1.079,
+          "mean_ms": 1.114,
+          "p95_ms": 1.42
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 605.397,
+          "mean_ms": 634.754,
+          "p95_ms": 756.44
+        },
+        "login_end_to_end": {
+          "median_ms": 324.593,
+          "mean_ms": 333.337,
+          "p95_ms": 408.055
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 256.501,
+          "mean_ms": 257.081,
+          "p95_ms": 292.573
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 7342,
+        "register_response_total": 290,
+        "login_request_total": 4539,
+        "login_response_total": 351
+      },
+      "server_db_bytes_per_credential": 4506
+    },
+    {
+      "algorithm": "ML-DSA-87",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 2592,
+        "signature": 4627
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 1.533,
+          "mean_ms": 1.609,
+          "p95_ms": 2.216
+        },
+        "sign": {
+          "median_ms": 4.428,
+          "mean_ms": 5.06,
+          "p95_ms": 11.695
+        },
+        "verify": {
+          "median_ms": 1.737,
+          "mean_ms": 1.761,
+          "p95_ms": 2.076
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 602.032,
+          "mean_ms": 598.447,
+          "p95_ms": 621.062
+        },
+        "login_end_to_end": {
+          "median_ms": 322.434,
+          "mean_ms": 323.575,
+          "p95_ms": 367.723
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 256.827,
+          "mean_ms": 259.097,
+          "p95_ms": 292.012
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 9953,
+        "register_response_total": 289,
+        "login_request_total": 6297,
+        "login_response_total": 352
+      },
+      "server_db_bytes_per_credential": 4506
+    }
+  ]
+}
