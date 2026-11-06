@@ -7,8 +7,13 @@ from __future__ import annotations
 
 import base64
 import binascii
+import contextlib
+import sys
 
-import oqs
+# liboqs-python prints a banner to stdout on import, which would corrupt
+# JSON output (bench) and framed protocols (token). Send it to stderr.
+with contextlib.redirect_stdout(sys.stderr):
+    import oqs
 
 ALGORITHMS = ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87")
 DEFAULT_ALGORITHM = "ML-DSA-65"
