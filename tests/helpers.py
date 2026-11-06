@@ -14,6 +14,32 @@ from quantumkey.protocol.migration import migration_binding
 RP_ID = "quantumkey.local"
 
 
+def database_url(tmp_path) -> str:
+    """Per-test SQLite file, or the opt-in PostgreSQL test database (emptied first).
+
+    PostgreSQL is only accepted on loopback with a database named qk_test_*, so a
+    stray QK_TEST_DATABASE_URL can never point the suite at real data.
+    """
+    import os
+
+    from sqlalchemy.engine import make_url
+
+    configured = os.environ.get("QK_TEST_DATABASE_URL")
+    if not configured:
+        return "sqlite:///" + (tmp_path / "rp.sqlite3").as_posix()
+    url = make_url(configured)
+    if url.host not in ("127.0.0.1", "localhost", "::1") or not (url.database or "").startswith("qk_test_"):
+        raise RuntimeError("QK_TEST_DATABASE_URL must be loopback with a qk_test_* database")
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(configured)
+    with engine.begin() as connection:
+        connection.execute(text("DROP SCHEMA public CASCADE"))
+        connection.execute(text("CREATE SCHEMA public"))
+    engine.dispose()
+    return configured
+
+
 class FakeClock:
     def __init__(self, now: float = 1_000_000.0) -> None:
         self.now = now

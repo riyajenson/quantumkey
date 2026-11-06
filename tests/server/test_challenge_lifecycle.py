@@ -11,6 +11,7 @@ from quantumkey.server.app import create_app
 from tests.helpers import (
     RP_ID,
     FakeClock,
+    database_url,
     login_body,
     login_signature,
     new_cred,
@@ -26,7 +27,7 @@ def clock():
 @pytest.fixture
 def client(tmp_path, clock):
     app = create_app(
-        "sqlite:///" + (tmp_path / "rp.sqlite3").as_posix(),
+        database_url(tmp_path),
         rp_id=RP_ID,
         clock=clock,
         challenge_ttl=60,
