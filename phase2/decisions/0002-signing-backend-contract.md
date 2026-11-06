@@ -1,6 +1,6 @@
 # ADR 0002: Draft software signing-backend contract
 
-**Status:** Provisional
+**Status:** Superseded by [ADR 0005](../../docs/decisions/0005-structured-request-signing.md) (2026-11-06)
 **Date:** 2026-10-26
 
 ## Decision
