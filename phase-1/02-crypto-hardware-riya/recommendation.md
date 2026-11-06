@@ -21,16 +21,16 @@ The pinned liboqs-python/liboqs stack successfully generated keys, signed, and v
 
 ## Required answers
 
-1. Does the tested Open Quantum Safe stack provide key generation, private-key export/import, signing, and verification?
-2. Which exact mechanism names must the application use?
-3. Which parameter set gives the best first-prototype trade-off?
-4. Are key and signature sizes acceptable for storage and API transport?
-5. Is interactive signing latency acceptable?
-6. Which environment gives every team member a reproducible setup?
-7. Can a Linux SBC run the same software backend?
-8. Is an RP2040-class device feasible with available implementations and memory?
-9. What should be handled by a future FPGA?
-10. What facts remain unverified?
+1. **Does the stack provide keygen, private-key export/import, signing and verification?** Yes. `generate_keypair`, `export_secret_key`, construction with `secret_key=` and `sign`/`verify` all work for the three variants.
+2. **Which mechanism names must the application use?** `ML-DSA-44`, `ML-DSA-65` and `ML-DSA-87` (standardized names, not legacy `Dilithium*`). They are listed in `quantumkey/crypto.py`.
+3. **Best first-prototype trade-off?** ML-DSA-65 (category 3, intermediate sizes). All three remain supported.
+4. **Are sizes acceptable for storage and API transport?** Yes for desktop. A login is 3.7–6.6 KB of JSON, and base64 adds about a third.
+5. **Is interactive signing latency acceptable?** Yes. 1.7–3.5 ms median, negligible next to the ~256 ms vault unlock.
+6. **Which environment gives every team member a reproducible setup?** Only native Windows 11 with the pinned lock file is validated. WSL/Docker/Linux remain open.
+7. **Can a Linux SBC run the same backend?** Unverified; no measurement.
+8. **Is an RP2040-class device feasible?** Uncertain. It is plausible for a functional token, but there is no protected key storage and the RNG is unverified (see `hardware-constraints.md`).
+9. **What should a future FPGA handle?** Nothing yet. Keep the key and policy in a full token, and consider acceleration only after an MCU bottleneck is measured.
+10. **What remains unverified?** Optimized and constant-time builds, non-Windows platforms, MCU memory/latency, side-channel behaviour, and ML-DSA context-string use.
 
 ## Security requirements carried forward
 
@@ -47,12 +47,12 @@ The pinned liboqs-python/liboqs stack successfully generated keys, signed, and v
 
 | Risk | Likelihood | Impact | Planned investigation/mitigation |
 |---|---|---|---|
-| Native Windows library setup is difficult to reproduce | TBD | TBD | Compare native, WSL, and Docker workflows |
-| liboqs and wrapper versions are incompatible | TBD | TBD | Record and pin matching versions |
-| Large signatures increase request/network cost | Known | TBD | Measure encoded request sizes |
-| MCU signing exceeds RAM or latency budget | TBD | High | Obtain measurements for concrete targets |
-| Hardware lacks protected key storage | TBD | High | Make key protection a target-selection criterion |
-| Side-channel resistance is insufficient | TBD | High | Review implementation claims and threat model |
+| Native Windows library setup is difficult to reproduce | Medium | Medium | Compare native, WSL, and Docker workflows |
+| liboqs and wrapper versions are incompatible | Low (pinned) | High | Record and pin matching versions |
+| Large signatures increase request/network cost | Known | Low (3.7–6.6 KB per login measured) | Measure encoded request sizes |
+| MCU signing exceeds RAM or latency budget | Medium | High | Obtain measurements for concrete targets |
+| Hardware lacks protected key storage | High for RP2040 | High | Make key protection a target-selection criterion |
+| Side-channel resistance is insufficient | Unknown | High | Review implementation claims and threat model |
 
 ## Final recommendation
 
