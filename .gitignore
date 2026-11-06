@@ -4,3 +4,8 @@ __pycache__/
 .env
 phase2-validation.sqlite3
 
+.pytest_cache/
+*.sqlite3
+# Local review material (slides, proposal PDF) is kept out of version control.
+*.pptx
+Auth Quantum*.pdf
