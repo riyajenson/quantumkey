@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import struct
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,9 +58,11 @@ def _derive(pin: str, salt: bytes) -> bytes:
 
 
 def _aad(credential_id: str, algorithm: str, policy_hash: bytes) -> bytes:
-    return b"QuantumKey-vault-v2\x00" + b"\x00".join(
-        [credential_id.encode(), algorithm.encode(), policy_hash]
-    )
+    """Length-prefixed, so no field value can be confused with a separator."""
+    parts = [b"QuantumKey-vault-v2\x00"]
+    for field in (credential_id.encode(), algorithm.encode(), policy_hash):
+        parts.append(struct.pack(">I", len(field)) + field)
+    return b"".join(parts)
 
 
 class Vault:
@@ -93,26 +96,27 @@ class Vault:
         sealed = AESGCM(_derive(pin, salt)).encrypt(
             nonce, private_key, _aad(credential_id, algorithm, policy.digest())
         )
-        with sqlite3.connect(self.path) as db:
-            db.execute(
-                "INSERT INTO credentials VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    credential_id,
-                    algorithm,
-                    public_key,
-                    policy.canonical_bytes(),
-                    salt,
-                    nonce,
-                    sealed,
-                    FORMAT_VERSION,
-                ),
-            )
+        row = (
+            credential_id,
+            algorithm,
+            public_key,
+            policy.canonical_bytes(),
+            salt,
+            nonce,
+            sealed,
+            FORMAT_VERSION,
+        )
+        try:
+            with sqlite3.connect(self.path) as db:
+                db.execute("INSERT INTO credentials VALUES (?, ?, ?, ?, ?, ?, ?, ?)", row)
+        except sqlite3.IntegrityError as exc:
+            raise VaultError(f"credential already exists: {credential_id}") from exc
 
     def _row(self, credential_id: str) -> tuple:
         with sqlite3.connect(self.path) as db:
             row = db.execute(
-                "SELECT credential_id, algorithm, public_key, policy, salt, nonce, ciphertext "
-                "FROM credentials WHERE credential_id = ?",
+                "SELECT credential_id, algorithm, public_key, policy, salt, nonce, ciphertext, "
+                "format_version FROM credentials WHERE credential_id = ?",
                 (credential_id,),
             ).fetchone()
         if row is None:
@@ -129,7 +133,9 @@ class Vault:
         return [self.get_public(i) for i in ids]
 
     def unlock(self, pin: str, credential_id: str) -> bytes:
-        cid, algorithm, _pk, policy, salt, nonce, sealed = self._row(credential_id)
+        cid, algorithm, _pk, policy, salt, nonce, sealed, version = self._row(credential_id)
+        if version != FORMAT_VERSION:
+            raise VaultError(f"unsupported vault format version: {version}")
         try:
             policy_hash = Policy.from_bytes(policy).digest()
             return AESGCM(_derive(pin, salt)).decrypt(
