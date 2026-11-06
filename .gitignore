@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
-.venv/
+.venv*/
 .env
+phase2-validation.sqlite3
 

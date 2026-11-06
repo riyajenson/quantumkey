@@ -1,23 +1,23 @@
 # Cryptography and Hardware Recommendation
 
-**Status:** Draft - complete after validation and evidence collection.
+**Status:** Provisional - crypto stack functionally validated on one Windows development machine; hardware and production-security evidence remain incomplete.
 
 ## Executive conclusion
 
-TBD: State whether ML-DSA through liboqs is suitable for the first QuantumKey software prototype and summarize the hardware outlook in three to five sentences.
+The pinned liboqs-python/liboqs stack successfully generated keys, signed, and verified all three standardized ML-DSA variants, with expected FIPS 204 sizes. ML-DSA-65 remains the provisional software candidate because it provides category 3 security with intermediate signature and key sizes. Windows/MSVC produced a warning that constant-time optimization barriers are not guaranteed, so this evidence does not support a security assurance claim. Linux SBC, RP2040, generic MCU, and FPGA feasibility remain unvalidated and require target-specific memory, entropy, key-storage, and timing evidence.
 
 ## Decisions
 
 | Decision | Recommendation | Evidence/confidence |
 |---|---|---|
-| Initial ML-DSA variant | Provisional candidate: ML-DSA-65 | Must be confirmed by measurements |
+| Initial ML-DSA variant | Provisional candidate: ML-DSA-65 | 100 iterations passed; Debug measurements only |
 | Variants retained for research | Provisional: 44, 65, and 87 | Needed for comparative benchmarks |
-| Cryptographic provider | Provisional: liboqs via liboqs-python | Must pass compatibility validation |
-| Primary development environment | TBD | TBD |
-| Windows vs WSL/Docker setup | TBD | TBD |
-| Linux SBC feasibility | TBD | TBD |
-| RP2040/Pico feasibility | TBD | TBD |
-| FPGA direction | TBD | TBD |
+| Cryptographic provider | liboqs via liboqs-python 0.16.0.1 / liboqs 0.16.0 | Functional validation passed; MSVC timing-safety limitation |
+| Primary development environment | Windows 11 x64, Python 3.12.10 | Reproduced once; pinned setup documented |
+| Windows vs WSL/Docker setup | Native Windows build works for experiments; prefer supported constant-time toolchain for future assurance | WSL/Docker not tested |
+| Linux SBC feasibility | Unverified | No target measurement |
+| RP2040/Pico feasibility | Unverified | No portable implementation or peak-memory evidence |
+| FPGA direction | Keep private key and signing policy in future token design | Hardware design and timing unvalidated |
 
 ## Required answers
 
@@ -56,5 +56,5 @@ TBD: State whether ML-DSA through liboqs is suitable for the first QuantumKey so
 
 ## Final recommendation
 
-TBD after completing `liboqs-validation.md`, `hardware-constraints.md`, and the experiment results.
+For software compatibility experiments, retain liboqs through liboqs-python and keep ML-DSA-65 as the provisional default. Before making a production-security or final performance claim, rerun on an approved constant-time toolchain with an optimized build. Hardware recommendations remain open until measurements exist for specific targets; see [`phase2/VALIDATION_RESULTS.md`](../../phase2/VALIDATION_RESULTS.md) for the complete current evidence.
 

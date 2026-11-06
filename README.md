@@ -80,12 +80,13 @@ successful authentication
 
 ## Project status
 
-QuantumKey is currently in **Phase 1: research, requirements, and threat modelling**. The team is validating assumptions and defining testable requirements before building the application.
+QuantumKey is currently in **Phase 2: architecture and technical validation**. The team is validating the cryptography, API/database stack, and local vault design through isolated experiments before building the application.
 
 Read more:
 
 - [System architecture](ARCHITECTURE.md)
 - [Development phases](PHASES.md)
+- [Phase 2 validation results and setup](phase2/README.md)
 
 ## Important limitation
 
