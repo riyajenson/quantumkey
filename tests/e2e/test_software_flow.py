@@ -121,34 +121,23 @@ def test_signer_rejects_malformed_requests(signer):
 
 def test_signature_for_one_operation_is_useless_for_another(http, signer):
     """A login signature cannot be replayed as a migration authorization."""
-    from quantumkey.authenticator.core import MigrationTarget
-
     client = AuthClient(http, RP_ID)
     old_id = client.register("alice", signer)
-    new_signer_path_signer = signer  # same vault is fine; ids differ
     started = http.post(
         "/auth/migrate/start", json={"username": "alice", "credential_id": old_id}
     ).json()
-    new_id = "qk-attacker"
-    new_public = new_signer_path_signer.create_credential("ML-DSA-65", Policy(rp_id=RP_ID), new_id)
-    request_login = SignRequest(
-        Operation.LOGIN, RP_ID, started["transaction_id"], crypto.b64d(started["challenge"])
-    )
-    wrong_old_sig = signer.sign(old_id, request_login)
-    target = MigrationTarget(new_id, "ML-DSA-65", new_public.public_key, Policy(rp_id=RP_ID).digest())
-    del target  # not used: attacker has no valid migrate signature
-    new_sig = signer.sign(
-        new_id,
-        SignRequest(
-            Operation.REGISTER, RP_ID, started["transaction_id"], crypto.b64d(started["challenge"])
-        ),
-    )
+    challenge = crypto.b64d(started["challenge"])
+    tx = started["transaction_id"]
+    attacker = signer.create_credential("ML-DSA-65", Policy(rp_id=RP_ID), "qk-attacker")
+    # The attacker only holds a LOGIN signature from the old credential.
+    wrong_old_sig = signer.sign(old_id, SignRequest(Operation.LOGIN, RP_ID, tx, challenge))
+    new_sig = signer.sign("qk-attacker", SignRequest(Operation.REGISTER, RP_ID, tx, challenge))
     response = http.post(
         "/auth/migrate/complete",
         json={
-            "transaction_id": started["transaction_id"],
-            "new_credential_id": new_id,
-            "new_public_key": crypto.b64e(new_public.public_key),
+            "transaction_id": tx,
+            "new_credential_id": "qk-attacker",
+            "new_public_key": crypto.b64e(attacker.public_key),
             "new_policy": crypto.b64e(Policy(rp_id=RP_ID).canonical_bytes()),
             "old_signature": crypto.b64e(wrong_old_sig),
             "new_signature": crypto.b64e(new_sig),
@@ -157,4 +146,4 @@ def test_signature_for_one_operation_is_useless_for_another(http, signer):
     assert response.status_code == 401
     assert http.get(f"/credentials/{old_id}").json()["status"] == "active"
     with pytest.raises(ServerRejected):
-        AuthClient(http, RP_ID).login("alice", signer, new_id)
+        AuthClient(http, RP_ID).login("alice", signer, "qk-attacker")
