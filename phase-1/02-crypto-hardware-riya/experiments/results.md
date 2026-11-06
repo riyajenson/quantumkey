@@ -51,5 +51,5 @@ All three standardized mechanisms were enabled and passed 300 key-generation, si
 
 ## Anomalies and limitations
 
-The wrapper automatically fetched and built the matching liboqs 0.16.0 source on first import. MSVC emitted liboqs warnings that its optimization barrier is not guaranteed for unsupported toolchains and compiler output may not be constant-time. Results came from a Debug build, one run, without a warm-up; treat them as compatibility and comparative research evidence, not production performance or security assurance. Context-string methods exist in the wrapper, but their behavior was not exercised by this run. See [`phase2/DEVELOPMENT.md`](../../../phase2/DEVELOPMENT.md) for the setup and limitations.
+The wrapper automatically fetched and built the matching liboqs 0.16.0 source on first import. MSVC emitted liboqs warnings that its optimization barrier is not guaranteed for unsupported toolchains and compiler output may not be constant-time. Results came from a Debug build, three sequential runs, without a warm-up; treat them as compatibility and comparative research evidence, not production performance or security assurance. Context-string methods exist in the wrapper, but their behavior was not exercised by this run. See [`phase2/DEVELOPMENT.md`](../../../phase2/DEVELOPMENT.md) for the setup and limitations.
 
