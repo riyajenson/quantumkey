@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Callable
+from typing import Annotated, Callable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -23,47 +23,53 @@ from quantumkey.server.service import (
 )
 
 
+# Size limits. A base64url ML-DSA-87 signature is 6,170 characters.
+Ident = Annotated[str, Field(min_length=1, max_length=64)]
+Algorithm = Annotated[str, Field(max_length=16)]
+Blob = Annotated[str, Field(max_length=8192)]
+
+
 class _Body(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
 class RegisterStart(_Body):
-    username: str = Field(max_length=64)
-    algorithm: str = crypto.DEFAULT_ALGORITHM
+    username: Ident
+    algorithm: Algorithm = crypto.DEFAULT_ALGORITHM
 
 
 class RegisterComplete(_Body):
-    transaction_id: str
-    credential_id: str
-    public_key: str
-    policy: str
-    signature: str
+    transaction_id: Ident
+    credential_id: Ident
+    public_key: Blob
+    policy: Blob
+    signature: Blob
 
 
 class LoginStart(_Body):
-    username: str = Field(max_length=64)
-    credential_id: str | None = None
+    username: Ident
+    credential_id: Ident | None = None
 
 
 class LoginComplete(_Body):
-    transaction_id: str
-    credential_id: str
-    signature: str
+    transaction_id: Ident
+    credential_id: Ident
+    signature: Blob
 
 
 class MigrateStart(_Body):
-    username: str = Field(max_length=64)
-    credential_id: str
-    algorithm: str = crypto.DEFAULT_ALGORITHM
+    username: Ident
+    credential_id: Ident
+    algorithm: Algorithm = crypto.DEFAULT_ALGORITHM
 
 
 class MigrateComplete(_Body):
-    transaction_id: str
-    new_credential_id: str
-    new_public_key: str
-    new_policy: str
-    old_signature: str
-    new_signature: str
+    transaction_id: Ident
+    new_credential_id: Ident
+    new_public_key: Blob
+    new_policy: Blob
+    old_signature: Blob
+    new_signature: Blob
 
 
 def _decode(value: str) -> bytes:
