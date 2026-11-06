@@ -25,18 +25,16 @@ Fill every field. Use exact versions or Git commit hashes rather than “latest.
 
 ## Installation procedure
 
-Document the exact commands that succeeded on the development machine. Include:
+What succeeded on the development machine (full commands in [`phase2/DEVELOPMENT.md`](../../phase2/DEVELOPMENT.md)):
 
-1. native prerequisites;
-2. how `liboqs` was obtained and built;
-3. whether a shared library/DLL was produced;
-4. how the library was placed on the runtime search path;
-5. how `liboqs-python` was installed;
-6. how the Python import was verified;
-7. any Windows DLL, compiler, PATH, or architecture problems;
-8. whether WSL or Docker was tested as an alternative.
-
-Do not paste secrets, user tokens, or machine-specific private paths that other team members cannot use.
+1. **Native prerequisites:** Git and Visual Studio Build Tools with the C++ workload.
+2. **Obtaining and building liboqs:** not done by hand. `pip install liboqs-python==0.16.0.1` (from `phase2/requirements.lock.txt`), then the first `import oqs` fetched liboqs 0.16.0 at commit `5a1a854b` and built it with the CMake from the virtual environment.
+3. **Library produced:** `oqs.dll`, installed under the user's `_oqs` directory and reused by later environments.
+4. **Search path:** the venv `Scripts` directory must be on `PATH` during the first import so the wrapper finds `cmake`. No manual DLL placement was needed.
+5. **Wrapper installation:** from the pinned lock file into a fresh virtual environment.
+6. **Import check:** `import oqs` and `oqs.get_enabled_sig_mechanisms()` list ML-DSA-44/65/87. The wrapper prints "liboqs-python faulthandler is disabled" to **stdout** on import. Anything that uses stdout as a protocol channel must redirect it (see `quantumkey/authenticator/token_entry.py`).
+7. **Problems seen:** a build of several minutes for many unused algorithms, and the MSVC optimization-barrier/constant-time warning.
+8. **WSL or Docker:** neither was tested.
 
 ## Capability checklist
 
@@ -83,5 +81,5 @@ Choose one after testing:
 - **Validated with limitations:** core operations work, but setup or platform limitations remain.
 - **Not validated:** a blocking capability is unavailable or unreliable.
 
-**Current conclusion:** TBD
+**Current conclusion:** Validated with limitations (Windows 11 x64 only; Debug build; MSVC constant-time warning). See "Reproducibility notes" above.
 
