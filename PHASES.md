@@ -10,8 +10,11 @@ Branches are organized by phase:
 main       Stable, reviewed project baseline
 phase-1    Research, requirements, and threat model
 phase-2    Architecture validation and technical experiments
+phase-3    Protocol, end-to-end prototype, vault, evaluation, virtual token
 ...
 ```
+
+`phase-3` carries the prototype work for Phases 3 onward. Current status for every phase and its gate is tracked in [docs/MILESTONE_ACCEPTANCE.md](docs/MILESTONE_ACCEPTANCE.md).
 
 Work should be committed in small, focused commits. Completed phase work should reach `main` through review rather than direct unreviewed development.
 

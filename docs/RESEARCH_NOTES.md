@@ -4,7 +4,7 @@
 
 ## What the prototype demonstrates
 
-A working relying party (FastAPI/SQLAlchemy), a PIN-protected multi-credential vault, a software signer, a virtual token process, and a CLI, covering register, login and migrate for ML-DSA-44/65/87. 46 automated tests pass (protocol, challenge lifecycle, end to end, migration, token), plus the 3 Phase 2 tests (49 in the full suite).
+A working relying party (FastAPI/SQLAlchemy), a PIN-protected multi-credential vault, a software signer, a virtual token process, and a CLI, covering register, login and migrate for ML-DSA-44/65/87. The automated suite (`python -m pytest -q`) covers the protocol, challenge lifecycle, hardening, end to end, migration and the token.
 
 ### Contribution 1 — structured-request signing
 
