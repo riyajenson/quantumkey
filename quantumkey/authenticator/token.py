@@ -77,36 +77,57 @@ def _public_dict(public: PublicCredential) -> dict:
     }
 
 
+def _text(message: dict, key: str) -> str:
+    value = message[key]
+    if not isinstance(value, str):
+        raise TypeError(f"{key} must be a string")
+    return value
+
+
+def _operation(value: object) -> Operation:
+    # bool is an int subclass in Python and JSON true would map to 1.
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError("operation must be an integer")
+    return Operation(value)
+
+
 def handle(core: SigningCore, message: dict) -> dict:
     command = message.get("cmd")
-    allowed = _COMMANDS.get(command)
+    allowed = _COMMANDS.get(command) if isinstance(command, str) else None
     if allowed is None:
         return {"ok": False, "error": "unknown command"}
     if not set(message) <= allowed:
         return {"ok": False, "error": "unexpected field"}
     try:
         if command == "create":
-            policy = Policy.from_bytes(crypto.b64d(message["policy"]))
-            public, _private = core.create(message["algorithm"], policy, message["credential_id"])
+            policy = Policy.from_bytes(crypto.b64d(_text(message, "policy")))
+            public, _private = core.create(
+                _text(message, "algorithm"), policy, _text(message, "credential_id")
+            )
             return {"ok": True, **_public_dict(public)}
         if command == "public":
-            return {"ok": True, **_public_dict(core.public(message["credential_id"]))}
+            return {"ok": True, **_public_dict(core.public(_text(message, "credential_id")))}
         target = message.get("target")
+        if target is not None and (
+            not isinstance(target, dict)
+            or set(target) != {"credential_id", "algorithm", "public_key", "policy_hash"}
+        ):
+            raise TypeError("malformed migration target")
         request = SignRequest(
-            operation=Operation(message["operation"]),
-            rp_id=message["rp_id"],
-            transaction_id=message["transaction_id"],
-            challenge=crypto.b64d(message["challenge"]),
+            operation=_operation(message["operation"]),
+            rp_id=_text(message, "rp_id"),
+            transaction_id=_text(message, "transaction_id"),
+            challenge=crypto.b64d(_text(message, "challenge")),
             target=None
             if target is None
             else MigrationTarget(
-                credential_id=target["credential_id"],
-                algorithm=target["algorithm"],
-                public_key=crypto.b64d(target["public_key"]),
-                policy_hash=crypto.b64d(target["policy_hash"]),
+                credential_id=_text(target, "credential_id"),
+                algorithm=_text(target, "algorithm"),
+                public_key=crypto.b64d(_text(target, "public_key")),
+                policy_hash=crypto.b64d(_text(target, "policy_hash")),
             ),
         )
-        signature = core.sign(message["credential_id"], request)
+        signature = core.sign(_text(message, "credential_id"), request)
         return {"ok": True, "signature": crypto.b64e(signature)}
     except SigningRefused as exc:
         return {"ok": False, "error": str(exc)}
