@@ -16,7 +16,11 @@ import time
 from typing import Any, Callable
 
 try:
-    import oqs
+    import contextlib
+
+    # liboqs-python prints a banner to stdout on import; keep stdout pure JSON.
+    with contextlib.redirect_stdout(sys.stderr):
+        import oqs
 except ImportError as exc:
     raise SystemExit(
         "Could not import 'oqs'. Build/install liboqs and liboqs-python using "
