@@ -4,6 +4,21 @@
 
 QuantumKey must support a software authenticator first while allowing the cryptographic signing operation to move onto physical hardware later. The authentication server should not require a new login protocol when that migration happens.
 
+## Implementation map (2026-11-06)
+
+| Component | Code |
+|---|---|
+| Canonical signed message, signing policy, migration binding | `quantumkey/protocol/` |
+| ML-DSA via liboqs, base64url helpers | `quantumkey/crypto.py` |
+| Relying party (challenges, register, login, migrate) | `quantumkey/server/service.py`, HTTP in `app.py` |
+| Signer contract and policy enforcement point | `quantumkey/authenticator/core.py` |
+| Encrypted vault and software signer | `quantumkey/authenticator/vault.py`, `software.py` |
+| Virtual token (separate process, framed protocol) | `quantumkey/authenticator/token.py`, `token_entry.py` |
+| Protocol client and CLI | `quantumkey/authenticator/client.py`, `cli.py` |
+| Evaluation harness | `quantumkey/bench.py` |
+
+The prototype refines the design below in one important way. The signing backend does not sign host-supplied bytes. It receives a structured request and builds the canonical message itself after checking the credential's policy (see [ADR 0005](docs/decisions/0005-structured-request-signing.md)). The "future USB backend" is represented by the virtual token, and software-to-token moves use key-export-free migration ([ADR 0006](docs/decisions/0006-key-export-free-migration.md)). The canonical message format is fixed in [ADR 0004](docs/decisions/0004-canonical-message.md) and [docs/API_CONTRACTS.md](docs/API_CONTRACTS.md).
+
 ## System overview
 
 ```text

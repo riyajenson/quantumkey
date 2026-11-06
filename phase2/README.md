@@ -2,6 +2,8 @@
 
 This phase validates the highest-risk technology assumptions with isolated experiments. The files here are research prototypes, not production authentication or vault components.
 
+> **Superseded code (2026-11-06):** the application now lives in [`quantumkey/`](../quantumkey). `vault.py`, `signing_backend.py` and `validation_service.py` remain only as validation evidence; see [ADR 0007](../docs/decisions/0007-application-package.md).
+
 ## Results
 
 - [Validation results](VALIDATION_RESULTS.md) records the Windows ML-DSA benchmark and the API/database/vault E2E result, including limitations.

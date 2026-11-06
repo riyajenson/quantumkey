@@ -4,7 +4,7 @@
 
 **Phase:** Research, requirements, and threat model
 
-**Status:** In progress
+**Status:** Complete with limitations (desktop validated; hardware targets analysed but unmeasured)
 
 ## Objective
 
@@ -35,18 +35,18 @@ This folder contains research and a standalone validation experiment. It does no
 
 ## Definition of done
 
-- [ ] FIPS 204 is used as the authority for ML-DSA parameters and sizes.
-- [ ] All three variants are compared.
-- [ ] Exact `liboqs` and `liboqs-python` versions are recorded.
-- [ ] Enabled ML-DSA mechanisms are enumerated at runtime.
-- [ ] Key generation, signing, and valid verification succeed.
-- [ ] Modified-message and modified-signature verification fail.
-- [ ] Key and signature sizes match the expected values.
-- [ ] Timing results include iteration count, median, mean, and p95.
-- [ ] Desktop/SBC, RP2040, generic MCU, and FPGA constraints are treated separately.
-- [ ] A provisional default variant is recommended with evidence.
-- [ ] Assumptions, risks, and unanswered questions are explicit.
-- [ ] No private key or secret key material is committed or printed.
+- [x] FIPS 204 is used as the authority for ML-DSA parameters and sizes.
+- [x] All three variants are compared.
+- [x] Exact `liboqs` and `liboqs-python` versions are recorded.
+- [x] Enabled ML-DSA mechanisms are enumerated at runtime.
+- [x] Key generation, signing, and valid verification succeed.
+- [x] Modified-message and modified-signature verification fail.
+- [x] Key and signature sizes match the expected values.
+- [x] Timing results include iteration count, median, mean, and p95.
+- [x] Desktop/SBC, RP2040, generic MCU, and FPGA constraints are treated separately.
+- [x] A provisional default variant is recommended with evidence.
+- [x] Assumptions, risks, and unanswered questions are explicit.
+- [x] No private key or secret key material is committed or printed.
 
 ## Authoritative references
 

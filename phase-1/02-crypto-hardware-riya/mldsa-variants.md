@@ -18,20 +18,22 @@ The byte sizes below are from Table 2 of the final FIPS 204 publication.
 
 ## Evaluation matrix
 
-Complete this after running the experiment on the target development environment.
+Measured on Windows 11 x64, Intel Core Ultra 5 125H, liboqs 0.16.0 Debug build (3 runs x 100 iterations; ranges are across runs). See [`experiments/results.md`](experiments/results.md). End-to-end figures come from the prototype benchmark in [`docs/evaluation/bench-2026-11-06.json`](../../docs/evaluation/bench-2026-11-06.json).
 
 | Criterion | ML-DSA-44 | ML-DSA-65 | ML-DSA-87 |
 |---|---|---|---|
 | Security category | 2 | 3 | 5 |
-| Key-generation median | TBD | TBD | TBD |
-| Signing median | TBD | TBD | TBD |
-| Verification median | TBD | TBD | TBD |
-| Observed public-key size | TBD | TBD | TBD |
-| Observed private-key size | TBD | TBD | TBD |
-| Observed signature size | TBD | TBD | TBD |
-| Desktop suitability | TBD | TBD | TBD |
-| Constrained-hardware suitability | TBD | TBD | TBD |
-| Network/storage impact | TBD | TBD | TBD |
+| Key-generation median | 0.46–0.47 ms | 0.78–0.79 ms | 1.05–1.24 ms |
+| Signing median | 1.70–2.02 ms | 2.66–2.97 ms | 3.04–3.49 ms |
+| Verification median | 0.57–0.60 ms | 0.86–0.87 ms | 1.18–1.38 ms |
+| Observed public-key size | 1,312 B | 1,952 B | 2,592 B |
+| Observed private-key size | 2,560 B | 4,032 B | 4,896 B |
+| Observed signature size | 2,420 B | 3,309 B | 4,627 B |
+| Desktop suitability | Suitable: latency imperceptible | Suitable: latency imperceptible | Suitable: latency imperceptible |
+| Constrained-hardware suitability | Unmeasured; smallest buffers | Unmeasured | Unmeasured; largest buffers |
+| Login request + response (prototype JSON) | 3,706 B | 4,890 B | 6,649 B |
+
+Observed sizes match FIPS 204 Table 2, and liboqs exports the expanded private-key form (not the 32-byte seed). On the desktop, the variant choice changes login latency by well under 1% of the measured ~325 ms login, which is dominated by the vault's Argon2id unlock. The variant mainly affects payload size and storage.
 
 ## Questions for each variant
 
@@ -44,9 +46,9 @@ Complete this after running the experiment on the target development environment
 - Does the implementation expose FIPS 204 context-string operations?
 - Does the target hardware have sufficient RAM, flash, randomness, and protected storage?
 
-## Provisional hypothesis
+## Provisional decision
 
-ML-DSA-65 is the candidate default because it provides a middle security category and moderate size/performance trade-off. This is not a final choice. The recommendation must be updated after local measurements and hardware evidence are collected.
+ML-DSA-65 is the default (category 3, intermediate sizes). Local measurements support it for desktop use. The choice stays provisional until an optimized, constant-time-supported build is measured and hardware evidence exists. The prototype supports all three variants, and a credential can be moved to a different variant through migration.
 
 ## Sources
 

@@ -80,7 +80,20 @@ successful authentication
 
 ## Project status
 
-QuantumKey is currently in **Phase 2: architecture and technical validation**. The team is validating the cryptography, API/database stack, and local vault design through isolated experiments before building the application.
+QuantumKey has a working research prototype on the `phase-3` branch. It meets the Phase 3 and 4 gates of [the plan](PHASES.md), most of Phase 5, and the Phase 8 gate in simulation (status per phase: [docs/MILESTONE_ACCEPTANCE.md](docs/MILESTONE_ACCEPTANCE.md)). It consists of a FastAPI relying party with atomic single-use challenges, a PIN-protected multi-credential vault, a software signer, a virtual token process, and a CLI. Registration, login and software-to-token credential migration work for ML-DSA-44/65/87, and replay, expiry, tampering, mismatch and concurrency cases are rejected in automated tests.
+
+Candidate research contributions (structured-request signing, credential-bound signing policy, key-export-free migration) and their limits and prior art are in [docs/RESEARCH_NOTES.md](docs/RESEARCH_NOTES.md); the design is in [docs/superpowers/specs](docs/superpowers/specs/2026-11-06-policy-bound-migratable-credentials-design.md).
+
+Run it (Windows, from the repository root, using the Phase 2 environment from [phase2/DEVELOPMENT.md](phase2/DEVELOPMENT.md)):
+
+```powershell
+$env:PATH = (Resolve-Path .\.venv\Scripts).Path + ';' + $env:PATH
+python -m pytest -q
+python -m uvicorn quantumkey.server.app:create_app --factory --port 8000
+python -m quantumkey.authenticator.cli --vault vault.sqlite3 register alice
+python -m quantumkey.authenticator.cli --vault vault.sqlite3 login alice
+python -m quantumkey.bench --iterations 20
+```
 
 Read more:
 
