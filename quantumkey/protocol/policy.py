@@ -27,6 +27,21 @@ class Policy:
 
     def __post_init__(self) -> None:
         valid = {"register", "login", "migrate"}
+        # Reject type confusion explicitly (JSON true == 1, 1.5, non-strings...).
+        if not isinstance(self.rp_id, str):
+            raise PolicyError("rp_id must be a string")
+        if not isinstance(self.allowed_ops, tuple) or not all(
+            isinstance(op, str) for op in self.allowed_ops
+        ):
+            raise PolicyError("allowed_ops must be strings")
+        if self.not_after is not None and (
+            isinstance(self.not_after, bool) or not isinstance(self.not_after, int)
+        ):
+            raise PolicyError("not_after must be an integer or null")
+        if isinstance(self.max_signs_per_minute, bool) or not isinstance(
+            self.max_signs_per_minute, int
+        ):
+            raise PolicyError("max_signs_per_minute must be an integer")
         if not self.rp_id:
             raise PolicyError("rp_id is required")
         if not self.allowed_ops or not set(self.allowed_ops) <= valid:
@@ -50,6 +65,8 @@ class Policy:
     def from_bytes(cls, data: bytes) -> "Policy":
         try:
             document = json.loads(data)
+            if not isinstance(document["allowed_ops"], list):
+                raise PolicyError("allowed_ops must be a list")
             policy = cls(
                 rp_id=document["rp_id"],
                 allowed_ops=tuple(document["allowed_ops"]),
