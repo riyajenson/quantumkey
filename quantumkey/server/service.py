@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-import struct
 import time
 from dataclasses import dataclass
 from typing import Callable
@@ -22,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from quantumkey import crypto
 from quantumkey.protocol.message import Operation, SignedMessage
+from quantumkey.protocol.migration import migration_binding
 from quantumkey.protocol.policy import Policy, PolicyError
 from quantumkey.server.models import Base, Challenge, Credential, User
 
@@ -45,17 +45,6 @@ class Started:
     expires_at: float
     algorithm: str
     credential_id: str | None = None
-
-
-def migration_binding(
-    credential_id: str, algorithm: str, public_key: bytes, policy_hash: bytes
-) -> bytes:
-    """Digest the old credential signs to authorize the new one."""
-    digest = hashlib.sha256()
-    for part in (credential_id.encode(), algorithm.encode(), public_key, policy_hash):
-        digest.update(struct.pack(">I", len(part)))
-        digest.update(part)
-    return digest.digest()
 
 
 class RelyingParty:

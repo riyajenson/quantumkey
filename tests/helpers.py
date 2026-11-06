@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from quantumkey import crypto
 from quantumkey.protocol.message import Operation, SignedMessage
 from quantumkey.protocol.policy import Policy
-from quantumkey.server.service import migration_binding
+from quantumkey.protocol.migration import migration_binding
 
 RP_ID = "quantumkey.local"
 

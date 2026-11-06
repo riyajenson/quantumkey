@@ -21,7 +21,7 @@ class PolicyError(ValueError):
 @dataclass(frozen=True)
 class Policy:
     rp_id: str
-    allowed_ops: tuple[str, ...] = ("login", "migrate")
+    allowed_ops: tuple[str, ...] = ("register", "login", "migrate")
     not_after: int | None = None  # unix seconds; None means no expiry
     max_signs_per_minute: int = 30
 
