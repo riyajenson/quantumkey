@@ -1,0 +1,35 @@
+# QuantumKey Experiment Plan
+
+**Status:** Updated 2026-11-06 with what has run. Each experiment records machine, OS, versions, build, commit and iteration count with its results.
+
+## 1. Experiments
+
+| ID | Question | Status | Where |
+|---|---|---|---|
+| E-01 | ML-DSA keygen/sign/verify feasibility on desktop | **Done** (3 x 100 iterations) | `phase-1/.../experiments/results.md` |
+| E-02 | Does the registration/login state machine meet the contract? | **Done** (automated) | `tests/server`, `tests/e2e` |
+| E-03 | Do independent ML-DSA implementations agree? | Open | — |
+| E-04 | Vault usability: unlock latency, overhead, corruption | **Partial**: latency and tamper detection measured; KDF calibration open | `docs/evaluation/`, vault tests |
+| E-05 | Payload sizes and transport overhead | **Done** for JSON/HTTP | `docs/evaluation/bench-2026-11-06.json` |
+| E-06 | MCU feasibility (RAM, flash, latency) | Open (analysis only) | `hardware-constraints.md` |
+| E-07 | Can a token enforce allowed signing requests? | **Done** for the virtual token | `tests/e2e/test_migration.py` |
+| E-08 | FPGA benefit | Deferred until E-06 shows a bottleneck | — |
+| E-09 | Robustness against hostile inputs | **Partial**: strict-parser tests; fuzzing open | protocol and token tests |
+| E-10 | Migration correctness (software to token, cross-variant) | **Done** | `tests/e2e/test_migration.py` |
+| E-11 | End-to-end protocol cost per variant | **Done** (first run, 20 iterations) | `python -m quantumkey.bench` |
+
+## 2. Method
+
+- Record platform, Python, CPU, liboqs version and build type with every result (the benchmark prints these).
+- Report median, mean and p95. Keep run-to-run ranges rather than a single number.
+- Measure end to end as well as primitives. Never claim security from performance numbers.
+- Keep raw JSON under `docs/evaluation/` named by date.
+
+## 3. Next experiments, in order
+
+1. Re-run E-01 and E-11 on Linux with an optimized GCC/Clang build (removes the Debug and constant-time caveats).
+2. E-04: calibrate Argon2id to a target unlock time (for example 250 ms and 500 ms) and report the security/latency trade-off.
+3. Run E-11 against PostgreSQL to replace SQLite's page-quantized storage numbers.
+4. E-03: cross-verify signatures with a second ML-DSA implementation.
+5. E-09: fuzz `SignedMessage.decode` and the token frame parser.
+6. E-06: port the token protocol to an MCU board and measure.
