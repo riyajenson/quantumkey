@@ -16,6 +16,7 @@ from tests.helpers import (
     login_signature,
     new_cred,
     register,
+    start_registration,
 )
 
 
@@ -125,7 +126,7 @@ def test_credential_id_mismatch_is_rejected(client):
 
 def test_challenge_is_bound_to_its_purpose(client):
     cred = register(client, "alice")
-    started = client.post("/auth/register/start", json={"username": "carol"}).json()
+    started = start_registration(client, "carol").json()
     response = client.post(
         "/auth/login/complete",
         json={
@@ -155,7 +156,7 @@ def test_signature_for_another_relying_party_is_rejected(client):
 
 def test_registration_rejects_swapped_policy(client):
     cred = new_cred()
-    started = client.post("/auth/register/start", json={"username": "alice"}).json()
+    started = start_registration(client, "alice").json()
     from quantumkey.protocol.message import Operation
     import hashlib
     from tests.helpers import message
@@ -181,7 +182,7 @@ def test_registration_rejects_swapped_policy(client):
 
 def test_policy_for_wrong_rp_is_rejected(client):
     cred = new_cred(policy=Policy(rp_id="evil.example"))
-    started = client.post("/auth/register/start", json={"username": "alice"}).json()
+    started = start_registration(client, "alice").json()
     response = client.post(
         "/auth/register/complete",
         json={
@@ -196,13 +197,17 @@ def test_policy_for_wrong_rp_is_rejected(client):
 
 
 def test_duplicate_user_and_unknown_user(client):
+    spare = client.app.state.rp.issue_invite("alice")
     register(client, "alice")
-    assert client.post("/auth/register/start", json={"username": "alice"}).status_code == 409
+    assert (
+        client.post("/auth/register/start", json={"username": "alice", "invite": spare}).status_code
+        == 409
+    )
     assert client.post("/auth/login/start", json={"username": "nobody"}).status_code == 404
 
 
 def test_malformed_input_is_rejected(client):
-    started = client.post("/auth/register/start", json={"username": "alice"}).json()
+    started = start_registration(client, "alice").json()
     base = {
         "transaction_id": started["transaction_id"],
         "credential_id": "c",
@@ -212,10 +217,17 @@ def test_malformed_input_is_rejected(client):
     }
     assert client.post("/auth/register/complete", json=base).status_code == 422
     assert (
-        client.post("/auth/register/start", json={"username": "x", "algorithm": "RSA"}).status_code
+        client.post(
+            "/auth/register/start", json={"username": "x", "invite": "i", "algorithm": "RSA"}
+        ).status_code
         == 422
     )
-    assert client.post("/auth/register/start", json={"username": "x", "extra": 1}).status_code == 422
+    assert (
+        client.post(
+            "/auth/register/start", json={"username": "x", "invite": "i", "extra": 1}
+        ).status_code
+        == 422
+    )
 
 
 def test_concurrent_completion_allows_exactly_one_success(client):

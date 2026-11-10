@@ -51,10 +51,13 @@ class AuthClient:
         signer: Signer,
         algorithm: str = crypto.DEFAULT_ALGORITHM,
         policy: Policy | None = None,
+        *,
+        invite: str,
     ) -> str:
         policy = policy or Policy(rp_id=self.rp_id)
         started = self._post(
-            "/auth/register/start", {"username": username, "algorithm": algorithm}
+            "/auth/register/start",
+            {"username": username, "invite": invite, "algorithm": algorithm},
         )
         credential_id = new_credential_id()
         public = signer.create_credential(started["algorithm"], policy, credential_id)

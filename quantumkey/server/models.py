@@ -43,3 +43,18 @@ class Challenge(Base):
     expires_at: Mapped[float] = mapped_column(Float, nullable=False)
     used_at: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[float] = mapped_column(Float, nullable=False)
+    invite_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+
+class EnrollmentInvite(Base):
+    """A single-use permission to register one username. Only the token's
+    SHA-256 is stored; the token itself is shown once, when issued."""
+
+    __tablename__ = "enrollment_invites"
+
+    invite_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False, unique=True)
+    expires_at: Mapped[float] = mapped_column(Float, nullable=False)
+    used_at: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[float] = mapped_column(Float, nullable=False)

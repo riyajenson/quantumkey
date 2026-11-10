@@ -87,11 +87,23 @@ def message(
     ).encode()
 
 
+def invite(http, username: str) -> str:
+    """Issue an enrollment invite through the app's relying party (operator action)."""
+    return http.app.state.rp.issue_invite(username)
+
+
+def start_registration(client, username: str, algorithm: str = "ML-DSA-65"):
+    """Issue an invite for `username` and post register/start with it."""
+    invite = client.app.state.rp.issue_invite(username)
+    return client.post(
+        "/auth/register/start",
+        json={"username": username, "invite": invite, "algorithm": algorithm},
+    )
+
+
 def register(client, username: str, cred: Cred | None = None) -> Cred:
     cred = cred or new_cred()
-    started = client.post(
-        "/auth/register/start", json={"username": username, "algorithm": cred.algorithm}
-    ).json()
+    started = start_registration(client, username, cred.algorithm).json()
     signature = crypto.sign(
         cred.algorithm,
         cred.private_key,

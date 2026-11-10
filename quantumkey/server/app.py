@@ -35,6 +35,7 @@ class _Body(BaseModel):
 
 class RegisterStart(_Body):
     username: Ident
+    invite: Ident
     algorithm: Algorithm = crypto.DEFAULT_ALGORITHM
 
 
@@ -118,7 +119,7 @@ def create_app(
 
     @app.post("/auth/register/start")
     def register_start(body: RegisterStart) -> dict:
-        return _started(rp, "register", rp.register_start(body.username, body.algorithm))
+        return _started(rp, "register", rp.register_start(body.username, body.invite, body.algorithm))
 
     @app.post("/auth/register/complete", status_code=201)
     def register_complete(body: RegisterComplete) -> dict:
