@@ -24,11 +24,12 @@ Gate: *the team can explain what QuantumKey protects, what it does not, how regi
 - [x] Vault proof of concept
 - [x] Draft signing-backend contract (superseded by the structured `Signer`, ADR 0005)
 - [x] Architecture decision records (`phase2/decisions/`, `docs/decisions/`)
-- [ ] Non-Windows reproducibility; optimized/constant-time build (CI will produce it; local Docker blocked, see `docs/BLOCKERS.md` B-04)
+- [x] Non-Windows reproducibility and an optimized build: CI on Linux with liboqs in Release mode passes the suite and produced `docs/evaluation/bench-2026-11-10-linux.json` (2026-11-10)
+- [ ] Local Docker reproduction (blocked by TLS interception, see `docs/BLOCKERS.md` B-04)
 
 ## Phase 3: Protocol and backend foundation. **Met**
 
-Gate: challenge generation and consumption pass expiry, replay, mismatch and concurrency tests. All pass in `tests/server/test_challenge_lifecycle.py` on SQLite and PostgreSQL 17 (13 tests, including 8 concurrent completions with exactly one success). Alembic migration, its model-match test and the CI workflow are in place; the workflow itself has not yet run on GitHub.
+Gate: challenge generation and consumption pass expiry, replay, mismatch and concurrency tests. All pass in `tests/server/test_challenge_lifecycle.py` on SQLite and PostgreSQL 17 (13 tests, including 8 concurrent completions with exactly one success). Alembic migration, its model-match test and the CI workflow are in place, and CI passed on PR #4 (run 42782171367, 2026-11-10).
 
 ## Phase 4: End-to-end authentication. **Met**
 
@@ -40,7 +41,7 @@ Gate: no plaintext PIN or private key on disk, wrong PINs fail safely, modified 
 
 ## Phase 6: Hardening, observability, reproducibility. **Started**
 
-Done: benchmark harness and first results. Dockerfile and CI workflow written but not yet run (see BLOCKERS B-04). Still open: load tests, server rate limiting, audit events, a clean-machine reproduction.
+Done: benchmark harness, Windows Debug and Linux Release results, and a CI workflow that runs the tests on SQLite and PostgreSQL and the benchmark on every PR. The Dockerfile is written but untested (see BLOCKERS B-04). Still open: load tests, server rate limiting, audit events, a clean-machine reproduction.
 
 ## Phase 7: Desktop GUI. **Not started** (deliberately deferred)
 

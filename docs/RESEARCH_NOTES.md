@@ -32,6 +32,16 @@ The old credential signs a binding over the new credential's id, algorithm, publ
 
 Findings: (1) the ML-DSA operations are a small fraction of login time; about 256 ms of each login is the Argon2id vault unlock, so vault KDF parameters, not signature size, dominate user-visible latency on this machine. (2) Base64 JSON inflates the signature payload by about a third, which matters more for the wire size than the algorithm choice. (3) Database growth per credential (2.5 to 4.5 KB) is quantized by 4 KB SQLite pages and should be re-measured with PostgreSQL.
 
+**Linux Release build (2026-11-10).** `docs/evaluation/bench-2026-11-10-linux.json`: same harness and 20 iterations, run in CI on a GitHub Actions `ubuntu-latest` VM with liboqs 0.16.0 built by GCC in Release mode.
+
+| Variant | keygen / sign / verify (median ms) | login end to end (median ms) | signer incl. vault unlock (median ms) |
+|---|---|---|---|
+| ML-DSA-44 | 0.046 / 0.084 / 0.045 | 163 | 150 |
+| ML-DSA-65 | 0.069 / 0.168 / 0.065 | 163 | 150 |
+| ML-DSA-87 | 0.104 / 0.186 / 0.098 | 164 | 151 |
+
+Signing is 20 to 30 times faster than the Windows Debug numbers, and login is about half. The machines differ, so this mixes build type with hardware and is not a controlled comparison. Finding (1) holds and is stronger: ML-DSA is under 0.2 ms of a 163 ms login, so the vault KDF is about 92% of it. Wire sizes and database bytes match the Windows run.
+
 ## Prior art (searched 2026-11-06; limited, not a literature review)
 
 - Mitra and Sethuraman, *The Qey: Implementation and performance study of post quantum cryptography in FIDO2*, arXiv:2510.21353 (2025).
@@ -45,7 +55,7 @@ ML-DSA in FIDO2/WebAuthn is therefore **not** a novelty claim. The three contrib
 - The virtual token is a process boundary, not tamper-resistant hardware, and keeps keys only in memory. `cli migrate` therefore migrates into a token that disappears when the command ends; use it to demonstrate the flow, not to keep an account.
 - No credential revocation endpoint, session store, TLS, rate limiting on the server, account recovery, or user authentication for first registration of a username.
 - Server-side policy checks cover relying party, operations and expiry only.
-- Windows x64, Python 3.12, Debug-configured liboqs 0.16.0 build with the constant-time warning; Linux/macOS and PostgreSQL for the new server are untested; benchmarks are small and not release numbers.
+- Developed on Windows x64 with a Debug-configured liboqs 0.16.0 build that prints a constant-time warning. CI runs the suite on Linux with a Release build and PostgreSQL 17, and that log contains no such warning; absence of the warning is not a constant-time verification. macOS is untested; benchmarks are small (20 iterations on a shared CI VM) and not release numbers.
 - The protocol is a custom, WebAuthn-inspired design, not WebAuthn/CTAP compatible. Its message encoding and migration protocol have had no formal analysis or independent review.
 
 ## Ideas to explore next (your choice)
@@ -59,4 +69,4 @@ ML-DSA in FIDO2/WebAuthn is therefore **not** a novelty claim. The three contrib
 7. **Credential transparency log.** An append-only hash chain of registrations, migrations and revocations so users can detect a substituted credential.
 8. **WebAuthn bridge.** Map credentials to the COSE identifiers requested by the IETF draft and test against a WebAuthn test harness.
 9. **Vault KDF tuning.** Since the KDF dominates latency, measure Argon2id parameters against a target unlock time and unlock caching with explicit timeouts.
-10. **Linux and optimized build.** Re-run tests and benchmarks with GCC/Clang in Release mode to remove the Debug and constant-time caveats.
+10. **Controlled benchmark.** The Linux Release run (2026-11-10) used different hardware from the Windows run; benchmark both build types on one machine to separate the build effect from the hardware effect.

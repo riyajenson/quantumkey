@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|
 | R-01 | Software signer gives no protection against a compromised host | H | H | Virtual token enforces policy in a separate process; real hardware token (Phase 8) | Open, documented |
 | R-02 | First registration is unauthenticated, so anyone can claim an unused username | H | H | Invite token or login-gated enrollment | Open |
-| R-03 | Windows MSVC Debug build triggers a liboqs timing-safety warning | M | M | Re-test with an optimized GCC/Clang build; local Docker is blocked by TLS interception (BLOCKERS B-04), so use the CI runner | Open |
+| R-03 | Windows MSVC Debug build triggers a liboqs timing-safety warning | M | M | Linux GCC Release build in CI shows no warning (2026-11-10); report numbers from that build. The warning's absence is not a constant-time verification, and local development still uses the Debug build | Mitigated |
 | R-04 | No formal analysis of the signed-message and migration protocol | M | H | Tamarin or ProVerif model; until then no security claim beyond tests | Open |
 | R-05 | Novelty claims are unproven; prior-art search was brief | M | H | Structured literature pass before any "novel" claim in the report | Open |
 | R-06 | liboqs or liboqs-python API/version drift breaks the build | M | M | Versions pinned in `phase2/requirements.lock.txt`, `Dockerfile` and CI | Mitigated |
