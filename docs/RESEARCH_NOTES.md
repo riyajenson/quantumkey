@@ -32,7 +32,7 @@ The old credential signs a binding over the new credential's id, algorithm, publ
 
 Findings: (1) the ML-DSA operations are a small fraction of login time; about 256 ms of each login is the Argon2id vault unlock, so vault KDF parameters, not signature size, dominate user-visible latency on this machine. (2) Base64 JSON inflates the signature payload by about a third, which matters more for the wire size than the algorithm choice. (3) Database growth per credential (2.5 to 4.5 KB) is quantized by 4 KB SQLite pages and should be re-measured with PostgreSQL.
 
-**Linux Release build (2026-11-10).** `docs/evaluation/bench-2026-11-10-linux.json`: same harness and 20 iterations, run in CI on a GitHub Actions `ubuntu-latest` VM with liboqs 0.16.0 built by GCC in Release mode.
+**Linux Release build (2026-11-10).** `docs/evaluation/bench-2026-11-10-linux.json`: same harness and 20 iterations, run in CI on a GitHub Actions `ubuntu-latest` VM (the run log shows image `ubuntu-26.04`; CI is now pinned to it) with liboqs 0.16.0 built by GCC in Release mode.
 
 | Variant | keygen / sign / verify (median ms) | login end to end (median ms) | signer incl. vault unlock (median ms) |
 |---|---|---|---|

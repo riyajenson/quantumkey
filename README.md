@@ -95,6 +95,31 @@ python -m quantumkey.authenticator.cli --vault vault.sqlite3 login alice
 python -m quantumkey.bench --iterations 20
 ```
 
+Or on Linux in Docker, with liboqs built in Release mode:
+
+```powershell
+docker build -t quantumkey:dev .
+docker run --rm quantumkey:dev                                    # full test suite
+docker run --rm quantumkey:dev python -m quantumkey.bench --iterations 20
+```
+
+If your network or antivirus inspects HTTPS (for example Norton's Web Shield), the build cannot verify `github.com` or PyPI. Pass the inspecting root certificate as a build secret; it is used only by the download steps and is not stored in the image:
+
+```powershell
+docker build --secret id=extra_ca,src="C:\ProgramData\Norton\Antivirus\wscert.pem" -t quantumkey:dev .
+```
+
+To run the server tests against PostgreSQL 17, share the database container's network so it is on loopback, which the test guard in `tests/helpers.py` requires:
+
+```bash
+cid=$(docker run --rm -d -e POSTGRES_USER=qk_test_user -e POSTGRES_PASSWORD=qk_test_password -e POSTGRES_DB=qk_test_server postgres:17)
+until docker exec "$cid" pg_isready -U qk_test_user -d qk_test_server; do sleep 1; done; sleep 2
+docker run --rm --network "container:$cid" \
+  -e QK_TEST_DATABASE_URL=postgresql+psycopg://qk_test_user:qk_test_password@127.0.0.1:5432/qk_test_server \
+  quantumkey:dev python -m pytest tests/server -q
+docker stop "$cid"
+```
+
 Read more:
 
 - [System architecture](ARCHITECTURE.md)
