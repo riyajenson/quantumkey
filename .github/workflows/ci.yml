@@ -53,3 +53,28 @@ jobs:
         with:
           name: bench-linux
           path: bench-linux.json
+
+  docker:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: qk_test_user
+          POSTGRES_PASSWORD: qk_test_password
+          POSTGRES_DB: qk_test_server
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U qk_test_user -d qk_test_server"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build --build-arg LIBOQS_VERSION=${LIBOQS_VERSION} -t quantumkey:ci .
+      - name: Tests in image (SQLite)
+        run: docker run --rm quantumkey:ci
+      - name: Server tests in image (PostgreSQL)
+        run: |
+          docker run --rm --network host \
+            -e QK_TEST_DATABASE_URL=postgresql+psycopg://qk_test_user:qk_test_password@127.0.0.1:5432/qk_test_server \
+            quantumkey:ci python -m pytest tests/server -q
