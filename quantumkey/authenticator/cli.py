@@ -1,10 +1,11 @@
 """Command-line authenticator.
 
-    python -m quantumkey.authenticator.cli --vault vault.sqlite3 register alice
+    python -m quantumkey.authenticator.cli --vault vault.sqlite3 register alice --invite <token>
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 login alice
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 list
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 migrate alice <old-credential-id>
 
+The invite comes from the server operator (`python -m quantumkey.server.admin invite alice`).
 The PIN comes from the QK_PIN environment variable or an interactive prompt.
 `migrate` creates the new credential inside a virtual token process, so it
 only demonstrates the flow within a single command (the token does not persist).
@@ -40,6 +41,7 @@ def main(argv: list[str] | None = None) -> int:
 
     register = commands.add_parser("register")
     register.add_argument("username")
+    register.add_argument("--invite", required=True, help="one-time invite from the server operator")
     register.add_argument("--algorithm", choices=crypto.ALGORITHMS, default=crypto.DEFAULT_ALGORITHM)
     login = commands.add_parser("login")
     login.add_argument("username")
@@ -59,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
         with httpx.Client(base_url=args.server, timeout=10) as http:
             client = AuthClient(http, args.rp_id)
             if args.command == "register":
-                print("registered", client.register(args.username, signer, args.algorithm))
+                print("registered", client.register(args.username, signer, args.algorithm, invite=args.invite))
             elif args.command == "login":
                 client.login(args.username, signer, args.credential_id)
                 print("login ok")

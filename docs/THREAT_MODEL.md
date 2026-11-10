@@ -15,10 +15,10 @@ Remote attacker without an account; network attacker; attacker with a copy of th
 | ID | Threat | Mitigation in the prototype | Evidence | Residual |
 |---|---|---|---|---|
 | T-01 | Challenge replay | Random 32-byte challenge, 60 s expiry, single use | `test_replayed_login_is_rejected`, `test_expired_challenge_is_rejected` | — |
-| T-02 | Challenge race | Atomic conditional UPDATE before verification | `test_concurrent_completion_allows_exactly_one_success` | Tested on SQLite only |
+| T-02 | Challenge race | Atomic conditional UPDATE before verification | `test_concurrent_completion_allows_exactly_one_success` | — (SQLite and PostgreSQL 17 in CI) |
 | T-03 | RP confusion | `rp_id` in every signed message and in the policy; signer refuses other RPs | `test_signature_for_another_relying_party_is_rejected` | No origin binding to a browser |
 | T-04 | Message ambiguity | Length-prefixed canonical encoding, domain tag, strict parser | protocol tests | No formal proof |
-| T-05 | Credential substitution | Registration only for new accounts; additions only through old-key-authorized migration | migration tests | First registration of a username is unauthenticated |
+| T-05 | Credential substitution | Registration only for new accounts and only with an operator-issued, single-use invite bound to the username; additions only through old-key-authorized migration | migration tests, `tests/server/test_enrollment.py` | The invite is a bearer token: whoever holds it can enroll that name, so its delivery channel must be trusted |
 | T-06 | Theft of a vault copy | Argon2id + AES-256-GCM per credential | vault tests | Offline PIN guessing; short PINs are weak |
 | T-07 | Host compromise while unlocked | Token keeps keys out of the host process | token tests | Software signer offers no protection; token is only a process |
 | T-08 | Signing-oracle abuse | **Structured-request signing**: the signer builds the message itself; the token rejects extra fields and has no raw-sign or export command | `test_token_has_no_export_or_raw_sign_command`, `test_token_enforces_policy_for_a_malicious_host` | A malicious host can still request a valid login for the policy's own RP |
@@ -38,6 +38,6 @@ Physical, fault-injection and side-channel attacks; compromised liboqs or Python
 ## 5. Risk register (top items)
 
 1. **The software signer gives no host-compromise protection.** Mitigation: a real token (Phase 8).
-2. **Unauthenticated first registration.** Mitigation: tie enrollment to an existing account login or an out-of-band invite.
+2. **First registration.** Mitigated: registration requires a single-use invite bound to the username (R-02). Residual: the invite is a bearer token, and invite guessing is not rate limited (impractical against 256 random bits).
 3. **Timing-safety warning in the Windows build.** Mitigation: the Linux GCC Release build in CI shows no warning; that build is not verified constant time.
 4. **No formal analysis of the message and migration protocol.** Mitigation: Tamarin/ProVerif model.

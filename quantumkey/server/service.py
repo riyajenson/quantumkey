@@ -23,10 +23,11 @@ from quantumkey import crypto
 from quantumkey.protocol.message import Operation, SignedMessage
 from quantumkey.protocol.migration import migration_binding
 from quantumkey.protocol.policy import Policy, PolicyError
-from quantumkey.server.models import Base, Challenge, Credential, User
+from quantumkey.server.models import Base, Challenge, Credential, EnrollmentInvite, User
 
 PROTOCOL_VERSION = 1
 MAX_ID_LENGTH = 64
+INVITE_TTL = 24 * 60 * 60  # seconds
 
 
 class ProtocolError(Exception):
@@ -67,7 +68,12 @@ class RelyingParty:
     # -- challenge lifecycle -------------------------------------------------
 
     def _issue(
-        self, purpose: str, username: str, algorithm: str, credential_id: str | None = None
+        self,
+        purpose: str,
+        username: str,
+        algorithm: str,
+        credential_id: str | None = None,
+        invite_id: str | None = None,
     ) -> Started:
         now = self.clock()
         started = Started(
@@ -88,6 +94,7 @@ class RelyingParty:
                     challenge=started.challenge,
                     expires_at=started.expires_at,
                     created_at=now,
+                    invite_id=invite_id,
                 )
             )
         return started
@@ -157,16 +164,53 @@ class RelyingParty:
         if len(public_key) != crypto.SIZES[algorithm][0]:
             raise ProtocolError("invalid_public_key", 422)
 
+    # -- enrollment invites ----------------------------------------------------
+
+    def issue_invite(self, username: str, ttl: float = INVITE_TTL) -> str:
+        """Create a single-use invite for `username` and return its token.
+        The token is not stored and cannot be shown again."""
+        self._check_ids(username)
+        token = secrets.token_urlsafe(32)
+        now = self.clock()
+        with Session(self.engine) as session, session.begin():
+            if session.get(User, username) is not None:
+                raise ProtocolError("user_exists", 409)
+            session.add(
+                EnrollmentInvite(
+                    invite_id=secrets.token_hex(8),
+                    username=username,
+                    token_hash=hashlib.sha256(token.encode()).digest(),
+                    expires_at=now + ttl,
+                    created_at=now,
+                )
+            )
+        return token
+
     # -- registration ----------------------------------------------------------
 
-    def register_start(self, username: str, algorithm: str = crypto.DEFAULT_ALGORITHM) -> Started:
+    def register_start(
+        self, username: str, invite: str, algorithm: str = crypto.DEFAULT_ALGORITHM
+    ) -> Started:
         self._check_ids(username)
         if algorithm not in crypto.ALGORITHMS:
             raise ProtocolError("unsupported_algorithm", 422)
         with Session(self.engine) as session:
+            # The invite is checked before the username, so only an invite holder
+            # can learn whether a name is taken.
+            row = session.scalars(
+                select(EnrollmentInvite).where(
+                    EnrollmentInvite.token_hash == hashlib.sha256(invite.encode()).digest(),
+                    EnrollmentInvite.username == username,
+                    EnrollmentInvite.used_at.is_(None),
+                    EnrollmentInvite.expires_at > self.clock(),
+                )
+            ).first()
+            if row is None:
+                raise ProtocolError("invalid_invite", 403)
             if session.get(User, username) is not None:
                 raise ProtocolError("user_exists", 409)
-        return self._issue("register", username, algorithm)
+            invite_id = row.invite_id
+        return self._issue("register", username, algorithm, invite_id=invite_id)
 
     def register_complete(
         self,
@@ -193,6 +237,19 @@ class RelyingParty:
         now = self.clock()
         try:
             with Session(self.engine) as session, session.begin():
+                # Spend the invite in the same transaction that creates the user:
+                # concurrent completions on one invite cannot both succeed.
+                spent = session.execute(
+                    update(EnrollmentInvite)
+                    .where(
+                        EnrollmentInvite.invite_id == challenge.invite_id,
+                        EnrollmentInvite.used_at.is_(None),
+                        EnrollmentInvite.expires_at > now,
+                    )
+                    .values(used_at=now)
+                )
+                if spent.rowcount != 1:
+                    raise ProtocolError("invalid_invite", 403)
                 session.add(User(username=challenge.username, created_at=now))
                 session.add(
                     Credential(

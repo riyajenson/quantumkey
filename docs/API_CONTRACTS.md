@@ -32,7 +32,7 @@ then 7 fields, each a 4-byte big-endian length + bytes, in this order:
 | Method | Route | Request | Response |
 |---|---|---|---|
 | GET | `/health` | — | `{status, protocol_version}` |
-| POST | `/auth/register/start` | `{username, algorithm?}` | started object (below) |
+| POST | `/auth/register/start` | `{username, invite, algorithm?}` | started object (below) |
 | POST | `/auth/register/complete` | `{transaction_id, credential_id, public_key, policy, signature}` | 201 `{credential_id, status}` |
 | POST | `/auth/login/start` | `{username, credential_id?}` | started object incl. `credential_id` |
 | POST | `/auth/login/complete` | `{transaction_id, credential_id, signature}` | `{authenticated, session_token}` |
@@ -46,6 +46,7 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 
 - A challenge is 32 random bytes with a 60 s TTL. It is bound to purpose, account, credential (login/migrate) and algorithm.
 - A challenge is consumed by one conditional `UPDATE ... WHERE used_at IS NULL AND expires_at > now`, **before** signature checks. A failed attempt therefore burns it.
+- Registration requires a single-use invite bound to the username, issued by the operator (`python -m quantumkey.server.admin invite <username>`, default lifetime 24 h). Only the token's SHA-256 is stored. `register/start` checks the invite before the username, so without a valid invite a taken name is indistinguishable from any other refusal. `register/complete` spends the invite in the same transaction that creates the account, after the signature verifies: a failed signature leaves the invite usable, and concurrent completions on one invite allow exactly one.
 - Registration only creates new accounts. Adding a credential to an existing account requires migration, which the existing credential must authorize.
 - Migration verifies two signatures: the old credential over the `migrate` message, and the new key over a `register` proof with the same transaction. It then revokes the old credential and inserts the new one in one transaction.
 - The server re-checks the stored policy's RP, allowed operations and expiry on login and migrate.
@@ -58,6 +59,7 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 | `credential_mismatch` | 400 | Credential differs from the one the challenge was issued for |
 | `invalid_signature` | 401 | Verification failed |
 | `policy_violation` | 403 | Stored policy forbids the operation or has expired |
+| `invalid_invite` | 403 | Unknown, expired, used, or other-username invite (all identical) |
 | `unknown_credential` | 404 | No active credential (also returned for an unknown user at login) |
 | `user_exists` / `already_registered` | 409 | Account or credential id already exists |
 | `invalid_encoding`, `invalid_identifier`, `invalid_public_key`, `invalid_policy`, `unsupported_algorithm` | 422 | Malformed input |

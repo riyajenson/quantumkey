@@ -14,7 +14,7 @@ from quantumkey.authenticator.vault import Vault, VaultUnlockError
 from quantumkey.protocol.message import Operation
 from quantumkey.protocol.policy import Policy
 from quantumkey.server.app import create_app
-from tests.helpers import RP_ID, FakeClock
+from tests.helpers import RP_ID, FakeClock, invite
 
 
 @pytest.fixture
@@ -36,15 +36,15 @@ def signer(tmp_path, clock):
 @pytest.mark.parametrize("algorithm", crypto.ALGORITHMS)
 def test_register_and_login_for_every_variant(http, signer, algorithm):
     client = AuthClient(http, RP_ID)
-    credential_id = client.register("alice", signer, algorithm=algorithm)
+    credential_id = client.register("alice", signer, algorithm=algorithm, invite=invite(http, "alice"))
     for _ in range(2):
         assert client.login("alice", signer, credential_id)
 
 
 def test_multiple_credentials_in_one_vault(http, signer):
     client = AuthClient(http, RP_ID)
-    first = client.register("alice", signer)
-    second = client.register("bob", signer, algorithm="ML-DSA-44")
+    first = client.register("alice", signer, invite=invite(http, "alice"))
+    second = client.register("bob", signer, algorithm="ML-DSA-44", invite=invite(http, "bob"))
     assert {c.credential_id for c in signer.vault.list_credentials()} == {first, second}
     assert client.login("bob", signer, second)
 
@@ -52,7 +52,7 @@ def test_multiple_credentials_in_one_vault(http, signer):
 def test_wrong_pin_cannot_sign_and_data_stays_private(http, tmp_path, clock):
     path = tmp_path / "vault.sqlite3"
     client = AuthClient(http, RP_ID)
-    credential_id = client.register("alice", SoftwareSigner(path, "1234", clock))
+    credential_id = client.register("alice", SoftwareSigner(path, "1234", clock), invite=invite(http, "alice"))
     with pytest.raises(VaultUnlockError):
         client.login("alice", SoftwareSigner(path, "0000", clock), credential_id)
     # The private key does not appear in the vault file in plaintext.
@@ -64,7 +64,7 @@ def test_tampered_vault_policy_is_detected(http, tmp_path, clock):
     path = tmp_path / "vault.sqlite3"
     client = AuthClient(http, RP_ID)
     signer = SoftwareSigner(path, "1234", clock)
-    credential_id = client.register("alice", signer)
+    credential_id = client.register("alice", signer, invite=invite(http, "alice"))
     weaker = Policy(rp_id=RP_ID, max_signs_per_minute=1000)
     with sqlite3.connect(path) as db:
         db.execute("UPDATE credentials SET policy = ?", (weaker.canonical_bytes(),))
@@ -78,7 +78,8 @@ def test_tampered_vault_policy_is_detected(http, tmp_path, clock):
 def test_signer_refuses_other_relying_parties_and_disallowed_operations(http, signer):
     client = AuthClient(http, RP_ID)
     credential_id = client.register(
-        "alice", signer, policy=Policy(rp_id=RP_ID, allowed_ops=("register", "login"))
+        "alice", signer, policy=Policy(rp_id=RP_ID, allowed_ops=("register", "login")),
+        invite=invite(http, "alice"),
     )
     challenge = b"\x07" * 32
     with pytest.raises(SigningRefused):
@@ -95,7 +96,8 @@ def test_signer_enforces_rate_limit_and_expiry(http, tmp_path, clock):
     signer = SoftwareSigner(tmp_path / "vault.sqlite3", "1234", clock)
     client = AuthClient(http, RP_ID)
     credential_id = client.register(
-        "alice", signer, policy=Policy(rp_id=RP_ID, max_signs_per_minute=3, not_after=int(clock.now) + 300)
+        "alice", signer, policy=Policy(rp_id=RP_ID, max_signs_per_minute=3, not_after=int(clock.now) + 300),
+        invite=invite(http, "alice"),
     )  # registration used 1 signature
     request = SignRequest(Operation.LOGIN, RP_ID, "tx", b"\x01" * 32)
     signer.sign(credential_id, request)
@@ -122,7 +124,7 @@ def test_signer_rejects_malformed_requests(signer):
 def test_signature_for_one_operation_is_useless_for_another(http, signer):
     """A login signature cannot be replayed as a migration authorization."""
     client = AuthClient(http, RP_ID)
-    old_id = client.register("alice", signer)
+    old_id = client.register("alice", signer, invite=invite(http, "alice"))
     started = http.post(
         "/auth/migrate/start", json={"username": "alice", "credential_id": old_id}
     ).json()

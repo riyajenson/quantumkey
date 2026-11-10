@@ -13,7 +13,7 @@ from quantumkey.authenticator.software import SoftwareSigner
 from quantumkey.authenticator.token import VirtualToken, handle
 from quantumkey.protocol.policy import Policy
 from quantumkey.server.app import create_app
-from tests.helpers import RP_ID, FakeClock
+from tests.helpers import RP_ID, FakeClock, invite
 
 
 @pytest.fixture
@@ -35,14 +35,14 @@ def token():
 
 def test_token_registers_and_logs_in_like_software(http, token):
     client = AuthClient(http, RP_ID)
-    credential_id = client.register("alice", token)
+    credential_id = client.register("alice", token, invite=invite(http, "alice"))
     assert client.login("alice", token, credential_id)
 
 
 @pytest.mark.parametrize("algorithm", crypto.ALGORITHMS)
 def test_migration_software_to_token(http, software, token, algorithm):
     client = AuthClient(http, RP_ID)
-    old_id = client.register("alice", software)
+    old_id = client.register("alice", software, invite=invite(http, "alice"))
     new_id = client.migrate("alice", old_id, software, token, algorithm=algorithm)
 
     assert http.get(f"/credentials/{old_id}").json() == {
@@ -61,7 +61,8 @@ def test_migration_software_to_token(http, software, token, algorithm):
 def test_migration_denied_when_policy_forbids_it(http, software, token):
     client = AuthClient(http, RP_ID)
     old_id = client.register(
-        "alice", software, policy=Policy(rp_id=RP_ID, allowed_ops=("register", "login"))
+        "alice", software, policy=Policy(rp_id=RP_ID, allowed_ops=("register", "login")),
+        invite=invite(http, "alice"),
     )
     with pytest.raises(SigningRefused, match="not allowed"):
         client.migrate("alice", old_id, software, token)
@@ -71,7 +72,7 @@ def test_migration_denied_when_policy_forbids_it(http, software, token):
 
 def test_failed_migration_leaves_old_credential_usable(http, software, token):
     client = AuthClient(http, RP_ID)
-    old_id = client.register("alice", software)
+    old_id = client.register("alice", software, invite=invite(http, "alice"))
     started = http.post(
         "/auth/migrate/start", json={"username": "alice", "credential_id": old_id}
     ).json()

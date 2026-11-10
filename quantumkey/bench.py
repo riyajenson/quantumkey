@@ -89,8 +89,11 @@ def bench_variant(algorithm: str, iterations: int, workdir: Path) -> dict:
     register_bytes = login_bytes = (0, 0)
     size_before = db_path.stat().st_size if db_path.exists() else 0
     for i in range(iterations):
+        invite = http.app.state.rp.issue_invite(f"user{i}")  # operator step, not timed
         before = (counting.sent, counting.received)
-        register_ms.append(timed(lambda: client.register(f"user{i}", signer, algorithm=algorithm)))
+        register_ms.append(
+            timed(lambda: client.register(f"user{i}", signer, algorithm=algorithm, invite=invite))
+        )
         mid = (counting.sent, counting.received)
         register_bytes = (mid[0] - before[0], mid[1] - before[1])
         login_ms.append(timed(lambda: client.login(f"user{i}", signer)))

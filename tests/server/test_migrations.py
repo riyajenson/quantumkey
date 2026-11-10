@@ -67,4 +67,6 @@ def test_app_runs_on_a_migrated_database_without_create_all(tmp_path):
     url = "sqlite:///" + (tmp_path / "m.sqlite3").as_posix()
     _upgrade(url)
     client = TestClient(create_app(url, create_schema=False))
-    assert client.post("/auth/register/start", json={"username": "alice"}).status_code == 200
+    invite = client.app.state.rp.issue_invite("alice")
+    response = client.post("/auth/register/start", json={"username": "alice", "invite": invite})
+    assert response.status_code == 200

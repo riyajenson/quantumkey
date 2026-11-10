@@ -32,6 +32,7 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 | FR-12 | Protocol and vault formats are versioned | `DOMAIN = b"QuantumKey/v1\0"`; vault `format_version` |
 | FR-13 | Users can revoke a credential directly | **Open** (only migration revokes) |
 | FR-14 | User presence / user verification is distinguished | **Open** |
+| FR-15 | First registration of a username requires a single-use, expiring invite issued by the operator | `tests/server/test_enrollment.py` |
 
 ## 4. Security requirements
 
