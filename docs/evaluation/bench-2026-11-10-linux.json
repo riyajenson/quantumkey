@@ -1,0 +1,156 @@
+{
+  "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+  "python": "3.12.16",
+  "processor": "",
+  "note": "in-process HTTP (no network); liboqs 0.16.0 Release build on GitHub Actions ubuntu-latest",
+  "pid": 16276,
+  "results": [
+    {
+      "algorithm": "ML-DSA-44",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 1312,
+        "signature": 2420
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.046,
+          "mean_ms": 0.086,
+          "p95_ms": 0.782
+        },
+        "sign": {
+          "median_ms": 0.084,
+          "mean_ms": 0.093,
+          "p95_ms": 0.172
+        },
+        "verify": {
+          "median_ms": 0.045,
+          "mean_ms": 0.046,
+          "p95_ms": 0.062
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 316.448,
+          "mean_ms": 317.571,
+          "p95_ms": 340.134
+        },
+        "login_end_to_end": {
+          "median_ms": 163.499,
+          "mean_ms": 163.423,
+          "p95_ms": 167.878
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 149.634,
+          "mean_ms": 150.128,
+          "p95_ms": 157.299
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 5304,
+        "register_response_total": 289,
+        "login_request_total": 3354,
+        "login_response_total": 352
+      },
+      "server_db_bytes_per_credential": 2458
+    },
+    {
+      "algorithm": "ML-DSA-65",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 1952,
+        "signature": 3309
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.069,
+          "mean_ms": 0.078,
+          "p95_ms": 0.202
+        },
+        "sign": {
+          "median_ms": 0.168,
+          "mean_ms": 0.174,
+          "p95_ms": 0.482
+        },
+        "verify": {
+          "median_ms": 0.065,
+          "mean_ms": 0.066,
+          "p95_ms": 0.077
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 315.696,
+          "mean_ms": 317.564,
+          "p95_ms": 347.725
+        },
+        "login_end_to_end": {
+          "median_ms": 163.359,
+          "mean_ms": 163.721,
+          "p95_ms": 169.976
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 149.899,
+          "mean_ms": 149.252,
+          "p95_ms": 151.999
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 7342,
+        "register_response_total": 289,
+        "login_request_total": 4539,
+        "login_response_total": 352
+      },
+      "server_db_bytes_per_credential": 4506
+    },
+    {
+      "algorithm": "ML-DSA-87",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 2592,
+        "signature": 4627
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.104,
+          "mean_ms": 0.113,
+          "p95_ms": 0.218
+        },
+        "sign": {
+          "median_ms": 0.186,
+          "mean_ms": 0.212,
+          "p95_ms": 0.53
+        },
+        "verify": {
+          "median_ms": 0.098,
+          "mean_ms": 0.103,
+          "p95_ms": 0.136
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 317.81,
+          "mean_ms": 318.522,
+          "p95_ms": 327.596
+        },
+        "login_end_to_end": {
+          "median_ms": 164.078,
+          "mean_ms": 164.534,
+          "p95_ms": 168.696
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 151.374,
+          "mean_ms": 151.389,
+          "p95_ms": 154.481
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 9953,
+        "register_response_total": 289,
+        "login_request_total": 6297,
+        "login_response_total": 351
+      },
+      "server_db_bytes_per_credential": 4506
+    }
+  ]
+}
