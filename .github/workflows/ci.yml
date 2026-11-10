@@ -44,3 +44,12 @@ jobs:
         env:
           QK_TEST_DATABASE_URL: postgresql+psycopg://qk_test_user:qk_test_password@127.0.0.1:5432/qk_test_server
         run: python -m pytest tests/server -q
+      - name: Benchmark
+        run: |
+          python -m quantumkey.bench --iterations 20 \
+            --note "in-process HTTP (no network); liboqs ${LIBOQS_VERSION} Release build on GitHub Actions ubuntu-latest" \
+            > bench-linux.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-linux
+          path: bench-linux.json
