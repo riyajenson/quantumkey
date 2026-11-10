@@ -52,5 +52,5 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 
 - **Latency:** interactive login under 1 s on the development machine (measured about 325 ms median).
 - **Reproducibility:** pinned dependencies, documented setup, automated tests (`python -m pytest -q`).
-- **Portability:** Windows 11 validated. Linux/macOS open.
+- **Portability:** Windows 11 validated locally; Linux (Ubuntu, GitHub Actions) validated in CI. macOS open.
 - **Migration:** server schema changes will need Alembic. Currently `create_all` only (open).

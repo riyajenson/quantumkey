@@ -18,18 +18,18 @@
 | Dimension | Finding |
 |---|---|
 | Key and signature size | Match FIPS 204 Table 2 exactly for all variants |
-| Primitive latency | 0.5–4.4 ms median for keygen, sign and verify (Debug build) |
+| Primitive latency | 0.5–4.4 ms median for keygen, sign and verify (Windows Debug build); 0.05–0.19 ms (Linux GCC Release build in CI, different hardware) |
 | End-to-end login | About 325 ms median, dominated by Argon2id (about 256 ms) |
 | Transport | 3.7–6.6 KB JSON per login; base64 adds about 33% |
 | Storage | 2.5–4.5 KB per credential row on the server (SQLite page-quantized) |
 | Interoperability | Single implementation only. Cross-implementation test vectors are open |
-| Side channels | MSVC build warning: constant time not guaranteed. Open |
+| Side channels | MSVC Debug build warns that constant time is not guaranteed; the Linux GCC Release build in CI shows no such warning. No constant-time verification has been done. Open |
 | Embedded | Analysed, not measured (`hardware-constraints.md`) |
 | Maintenance | liboqs is actively maintained. OQS describes it as a research/prototyping library |
 
 ## 3. Open questions
 
-- Do results change with a GCC/Clang Release build on Linux?
+- How much of the Linux speed-up is the Release build and how much the hardware? (Measure both builds on one machine.)
 - Peak RAM on an MCU-class target with a portable ML-DSA implementation?
 - Should FIPS 204 context strings be used, and does liboqs-python 0.16 implement them correctly?
 - Do independent ML-DSA implementations (for example PQClean or the Go/Rust stacks) verify QuantumKey signatures?

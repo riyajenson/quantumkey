@@ -128,6 +128,9 @@ def bench_variant(algorithm: str, iterations: int, workdir: Path) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--iterations", type=int, default=20)
+    parser.add_argument(
+        "--note", default="in-process HTTP (no network); unoptimized liboqs build on Windows"
+    )
     args = parser.parse_args(argv)
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         results = [bench_variant(a, args.iterations, Path(tmp)) for a in crypto.ALGORITHMS]
@@ -137,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
                 "platform": platform.platform(),
                 "python": platform.python_version(),
                 "processor": platform.processor(),
-                "note": "in-process HTTP (no network); unoptimized liboqs build on Windows",
+                "note": args.note,
                 "pid": os.getpid(),
                 "results": results,
             },

@@ -16,7 +16,7 @@
 | E-08 | FPGA benefit | Deferred until E-06 shows a bottleneck | — |
 | E-09 | Robustness against hostile inputs | **Partial**: strict-parser tests; fuzzing open | protocol and token tests |
 | E-10 | Migration correctness (software to token, cross-variant) | **Done** | `tests/e2e/test_migration.py` |
-| E-11 | End-to-end protocol cost per variant | **Done** (first run, 20 iterations) | `python -m quantumkey.bench` |
+| E-11 | End-to-end protocol cost per variant | **Done** on Windows Debug and Linux Release (20 iterations each) | `python -m quantumkey.bench`, `docs/evaluation/` |
 
 ## 2. Method
 
@@ -27,7 +27,7 @@
 
 ## 3. Next experiments, in order
 
-1. Re-run E-01 and E-11 on Linux with an optimized GCC/Clang build (removes the Debug and constant-time caveats).
+1. ~~Re-run E-11 on Linux with an optimized build~~ (done 2026-11-10 in CI). The standalone E-01 smoke script has not been re-run on Linux; E-11 covers the same primitives.
 2. E-04: calibrate Argon2id to a target unlock time (for example 250 ms and 500 ms) and report the security/latency trade-off.
 3. Run E-11 against PostgreSQL to replace SQLite's page-quantized storage numbers.
 4. E-03: cross-verify signatures with a second ML-DSA implementation.

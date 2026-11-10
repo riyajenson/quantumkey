@@ -39,5 +39,5 @@ Physical, fault-injection and side-channel attacks; compromised liboqs or Python
 
 1. **The software signer gives no host-compromise protection.** Mitigation: a real token (Phase 8).
 2. **Unauthenticated first registration.** Mitigation: tie enrollment to an existing account login or an out-of-band invite.
-3. **Timing-safety warning in the Windows build.** Mitigation: re-test with GCC/Clang Release.
+3. **Timing-safety warning in the Windows build.** Mitigation: the Linux GCC Release build in CI shows no warning; that build is not verified constant time.
 4. **No formal analysis of the message and migration protocol.** Mitigation: Tamarin/ProVerif model.

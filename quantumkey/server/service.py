@@ -54,13 +54,15 @@ class RelyingParty:
         rp_id: str,
         clock: Callable[[], float] = time.time,
         challenge_ttl: float = 60.0,
+        create_schema: bool = True,
     ) -> None:
         self.rp_id = rp_id
         self.clock = clock
         self.challenge_ttl = challenge_ttl
         kwargs = {"connect_args": {"check_same_thread": False}} if database_url.startswith("sqlite") else {}
         self.engine: Engine = create_engine(database_url, **kwargs)
-        Base.metadata.create_all(self.engine)
+        if create_schema:  # production deployments run `alembic upgrade head` instead
+            Base.metadata.create_all(self.engine)
 
     # -- challenge lifecycle -------------------------------------------------
 

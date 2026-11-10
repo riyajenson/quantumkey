@@ -99,9 +99,12 @@ def create_app(
     rp_id: str = "quantumkey.local",
     clock: Callable[[], float] = time.time,
     challenge_ttl: float = 60.0,
+    create_schema: bool = True,
 ) -> FastAPI:
     url = database_url or os.environ.get("QK_DATABASE_URL", "sqlite:///quantumkey.sqlite3")
-    rp = RelyingParty(url, rp_id=rp_id, clock=clock, challenge_ttl=challenge_ttl)
+    rp = RelyingParty(
+        url, rp_id=rp_id, clock=clock, challenge_ttl=challenge_ttl, create_schema=create_schema
+    )
     app = FastAPI(title="QuantumKey relying party (research prototype)")
     app.state.rp = rp
 
