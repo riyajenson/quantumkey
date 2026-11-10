@@ -255,6 +255,17 @@ used_at
 created_at
 ```
 
+### EnrollmentInvite
+
+```text
+invite_id
+username
+token_hash      (SHA-256; the token is never stored)
+expires_at
+used_at
+created_at
+```
+
 The server schema contains no private-key field.
 
 ## Trust boundaries
