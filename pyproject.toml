@@ -20,6 +20,10 @@ dependencies = [
 postgres = ["psycopg[binary]>=3.3"]
 test = ["pytest>=9"]
 
+[tool.setuptools.packages.find]
+# Only the application package; phase2/, migrations/ and CI's liboqs checkout are not installed.
+include = ["quantumkey*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests", "phase2/tests"]
 filterwarnings = [
