@@ -10,7 +10,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     services:
       postgres:
         image: postgres:17
@@ -23,8 +23,8 @@ jobs:
           --health-cmd "pg_isready -U qk_test_user -d qk_test_server"
           --health-interval 5s --health-timeout 5s --health-retries 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Build liboqs ${{ env.LIBOQS_VERSION }}
@@ -47,15 +47,15 @@ jobs:
       - name: Benchmark
         run: |
           python -m quantumkey.bench --iterations 20 \
-            --note "in-process HTTP (no network); liboqs ${LIBOQS_VERSION} Release build on GitHub Actions ubuntu-latest" \
+            --note "in-process HTTP (no network); liboqs ${LIBOQS_VERSION} Release build on GitHub Actions ubuntu-26.04" \
             > bench-linux.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: bench-linux
           path: bench-linux.json
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     services:
       postgres:
         image: postgres:17
@@ -68,7 +68,7 @@ jobs:
           --health-cmd "pg_isready -U qk_test_user -d qk_test_server"
           --health-interval 5s --health-timeout 5s --health-retries 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build image
         run: docker build --build-arg LIBOQS_VERSION=${LIBOQS_VERSION} -t quantumkey:ci .
       - name: Tests in image (SQLite)
