@@ -22,7 +22,7 @@ Never describe planned functionality as shipped or verified.
 These rules apply to every task unless the user explicitly changes them:
 
 1. **No pushing.** The user will push manually. Never push commits, branches, tags, or other refs to a remote. Do not publish releases or open PRs.
-2. **No testing until explicitly authorized.** Do not run tests, builds, benchmarks, linters, formatters, type-checkers, integration checks, or project code. Static inspection and reading files are allowed. Ask before any validation command that executes project tooling.
+2. **Run tests at all stages.** Run the test suite (`python -m pytest -q`) at the start of a task to record the baseline, after each change, and before every commit; report the exact result. When server or database code changes, also run the server tests on PostgreSQL (see the Docker section of `README.md`). Never claim something works without a passing run, and never commit on a failing suite without saying so. Benchmarks, dependency installs and other heavier tooling still need the user's approval.
 3. **No subagents until explicitly authorized.** Do not spawn, delegate to, or coordinate parallel agents.
 4. **Micro-commit everywhere.** When commits are authorized, make small, focused, coherent local commits. Inspect the diff and stage only the intended files. Do not combine unrelated changes.
 5. **No Claude mention on micro-commit.** Commit messages must not mention Claude, AI tools, agents, or tool-generated attribution. Use ordinary project-focused messages, for example `docs: define authenticator trust boundaries`.
@@ -71,9 +71,9 @@ Read and report:
 
 Do not fetch, pull, checkout, switch, stash, reset, clean, amend, rebase, or push during the audit.
 
-### 3.4 Do not execute project tooling
+### 3.4 Run the tests; do not mutate the project
 
-During the initial audit, do not run project code or commands that perform validation or mutate generated files. This includes tests, builds, benchmarks, formatters, linters, type-checkers, migrations, package installation, code generation, and application startup. Static commands that list files, inspect Git metadata, or read source are acceptable.
+During the initial audit, run the test suite to establish a baseline (rule 2). Do not run commands that mutate files or the environment: formatters, migrations against real databases, package installation, code generation, or application startup. Static commands that list files, inspect Git metadata, or read source are acceptable.
 
 ### 3.5 Required audit report
 
@@ -254,11 +254,11 @@ For each approved task:
 2. Inspect relevant source/docs and current Git status.
 3. Make the smallest coherent change.
 4. Review the complete diff for correctness, scope, secrets, and accidental changes.
-5. Do not run tests or other validation until explicitly authorized.
+5. Run the test suite (and the PostgreSQL server tests if server or database code changed); fix or report any failure before going on.
 6. Stage only the intended files.
 7. Create one focused local micro-commit when committing is within the approved scope.
 8. Use a neutral project-focused commit message. Never mention Claude, AI, agent, or tool attribution.
-9. Report changed files, commit hash if created, validation not run, and remaining risks.
+9. Report changed files, commit hash if created, test results (and anything not tested), and remaining risks.
 10. Stop. Never push.
 
 If the user asks only for a draft or audit, do not commit.
@@ -271,6 +271,6 @@ When beginning work in the actual repository:
 2. Perform the read-only repository and directory audit in Section 3.
 3. Compare the actual docs against the eight Phase 1 drafts and current tracker.
 4. Report the evidence-based current state and prioritized remaining work.
-5. Wait for explicit user approval before editing, coding, committing, testing, spawning subagents, or changing project scope.
+5. Wait for explicit user approval before editing, coding, committing, spawning subagents, or changing project scope. Running the tests needs no approval (rule 2).
 
 **Do not start implementation or edit project files until the audit findings have been reported and the user approves the next scope.**
