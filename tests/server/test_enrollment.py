@@ -160,3 +160,24 @@ def test_concurrent_completions_with_one_invite_allow_exactly_one(client):
         thread.join()
     assert sorted(statuses) == [201] + [403] * 7
 
+
+def test_admin_command_issues_a_working_invite(tmp_path, capsys):
+    from quantumkey.server import admin
+
+    url = database_url(tmp_path)
+    assert admin.main(["--database-url", url, "invite", "alice", "--ttl-hours", "2"]) == 0
+    token = capsys.readouterr().out.strip()
+    client = TestClient(create_app(url, rp_id=RP_ID))
+    started = start(client, "alice", token)
+    assert started.status_code == 200, started.text
+    assert complete(client, started.json(), new_cred()).status_code == 201
+
+
+def test_admin_command_refuses_an_existing_user(tmp_path, capsys):
+    from quantumkey.server import admin
+
+    url = database_url(tmp_path)
+    client = TestClient(create_app(url, rp_id=RP_ID))
+    complete(client, start(client, "alice", rp(client).issue_invite("alice")).json(), new_cred())
+    assert admin.main(["--database-url", url, "invite", "alice"]) == 1
+    assert "user_exists" in capsys.readouterr().err
