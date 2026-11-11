@@ -67,7 +67,8 @@ class Counting:
 
 def bench_variant(algorithm: str, iterations: int, workdir: Path) -> dict:
     db_path = workdir / f"rp-{algorithm}.sqlite3"
-    http = TestClient(create_app("sqlite:///" + db_path.as_posix(), rp_id=RP_ID))
+    # One client makes every request, so the per-IP rate limit is off for the benchmark.
+    http = TestClient(create_app("sqlite:///" + db_path.as_posix(), rp_id=RP_ID, rate_limit=None))
     counting = Counting(http)
     client = AuthClient(counting, RP_ID)
     signer = SoftwareSigner(workdir / f"vault-{algorithm}.sqlite3", pin="bench-pin")

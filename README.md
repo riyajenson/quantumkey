@@ -91,6 +91,7 @@ $env:PATH = (Resolve-Path .\.venv\Scripts).Path + ';' + $env:PATH
 python -m pytest -q
 python -m uvicorn quantumkey.server.app:create_app --factory --port 8000
 python -m quantumkey.server.admin invite alice    # prints a one-time invite, valid 24 h
+python -m quantumkey.server.admin purge           # optional: the server also purges expired rows itself
 python -m quantumkey.authenticator.cli --vault vault.sqlite3 register alice --invite <invite>
 python -m quantumkey.authenticator.cli --vault vault.sqlite3 login alice
 python -m quantumkey.bench --iterations 20

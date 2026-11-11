@@ -41,7 +41,7 @@ Gate: no plaintext PIN or private key on disk, wrong PINs fail safely, modified 
 
 ## Phase 6: Hardening, observability, reproducibility. **Started**
 
-Done: benchmark harness, Windows Debug and Linux Release results, and a CI workflow that runs the tests on SQLite and PostgreSQL and the benchmark on every PR. The Docker image builds and passes the suite locally (BLOCKERS B-04). Still open: load tests, server rate limiting, audit events, a clean-machine reproduction.
+Done: benchmark harness, Windows Debug and Linux Release results, and a CI workflow that runs the tests on SQLite and PostgreSQL and the benchmark on every PR. The Docker image builds and passes the suite locally (BLOCKERS B-04). Rate limiting, a request-size cap and purging of expired rows are in (R-10). Still open: load tests, audit events, a clean-machine reproduction.
 
 ## Phase 7: Desktop GUI. **Not started** (deliberately deferred)
 
