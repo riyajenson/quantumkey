@@ -35,7 +35,7 @@ There is no PIN, derived key or plaintext private key on disk (`test_wrong_pin_c
 
 ## 4. Cryptography
 
-- **KDF:** Argon2id, 32-byte output, fresh 16-byte salt per credential. New credentials use the vault's parameters, default time cost 3, memory 64 MiB, parallelism 1. On the development machine one derivation takes about 256 ms, which is most of a login (`docs/evaluation/bench-2026-11-06.json`). Parameters read from the file must lie within time cost 1-10, memory 8 MiB-1 GiB and parallelism 1-8, so a damaged or hostile file cannot make an unlock hang. Lowering them in the file only changes the derived key, so unlock fails.
+- **KDF:** Argon2id, 32-byte output, fresh 16-byte salt per credential. New credentials use the vault's parameters, default time cost 3, memory 64 MiB, parallelism 1. One derivation takes about 256 ms on the Windows development machine and 129 ms on the CI runner, about 92% of a login (`docs/evaluation/bench-2026-11-06.json`, `docs/evaluation/kdf-calibration-2026-11-11-linux.json`). Parameters read from the file must lie within time cost 1-10, memory 8 MiB-1 GiB and parallelism 1-8, so a damaged or hostile file cannot make an unlock hang. Lowering them in the file only changes the derived key, so unlock fails.
 - **AEAD:** AES-256-GCM (pyca/cryptography), random 96-bit nonce. Each key encrypts exactly one message, so nonce reuse cannot occur.
 - **Associated data:** `"QuantumKey-vault-v2" 0x00` followed by length-prefixed credential id, algorithm and SHA-256(policy). The label is unchanged in v3 so upgraded rows still open. Editing any of these fields, or the ciphertext, makes unlock fail (`test_tampered_vault_policy_is_detected`).
 - **Errors:** a wrong PIN and damaged data raise the same `VaultUnlockError`.
@@ -55,6 +55,6 @@ There is no PIN, derived key or plaintext private key on disk (`test_wrong_pin_c
 ## 6. Known gaps
 
 - No failed-attempt counter. It could not stop offline guessing against a copied file anyway; a hardware token would be needed.
-- Argon2id parameters are not yet calibrated on target devices. `python -m quantumkey.authenticator.calibrate` measures a grid and recommends parameters for a target unlock time; `cli change-pin --time-cost T --memory-kib M` applies them (experiment E-04). CI runs the calibration on Linux; a local run on a machine under memory pressure gave unusable numbers, so only clean runs should be reported.
+- Argon2id parameters are not yet calibrated on target devices. `python -m quantumkey.authenticator.calibrate` measures a grid and recommends parameters for a target unlock time; `cli change-pin --time-cost T --memory-kib M` applies them (experiment E-04). Results from CI are in `docs/RESEARCH_NOTES.md` (E-04); a local run on a machine under memory pressure gave unusable numbers, so only runs on an unloaded machine should be reported.
 - The device id is self-reported; nothing stops a modified client from sending another vault's id.
 - Sessions live in one process. The CLI starts a new process per command, so it never benefits from them; a long-running client (the planned GUI) would.
