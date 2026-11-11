@@ -2,9 +2,12 @@
 there is no HTTP admin API.
 
     python -m quantumkey.server.admin invite alice [--ttl-hours 24]
+    python -m quantumkey.server.admin purge
 
 Prints the invite token once. Only its SHA-256 is stored, so a lost token
 cannot be recovered; issue a new one. Hand it to the user out of band.
+`purge` deletes expired challenges and expired or used invites; the server also
+does this by itself at most once a minute.
 """
 
 from __future__ import annotations
@@ -26,17 +29,21 @@ def main(argv: list[str] | None = None) -> int:
     invite = commands.add_parser("invite", help="issue a single-use registration invite")
     invite.add_argument("username")
     invite.add_argument("--ttl-hours", type=float, default=INVITE_TTL / 3600)
+    commands.add_parser("purge", help="delete expired challenges and expired or used invites")
 
     args = parser.parse_args(argv)
     rp = RelyingParty(args.database_url, rp_id="quantumkey.local")
     try:
-        token = rp.issue_invite(args.username, ttl=args.ttl_hours * 3600)
+        if args.command == "purge":
+            challenges, invites = rp.purge_expired()
+            print(f"purged {challenges} challenges, {invites} invites")
+        else:
+            print(rp.issue_invite(args.username, ttl=args.ttl_hours * 3600))
     except ProtocolError as exc:
         print(f"error: {exc.code}", file=sys.stderr)
         return 1
     finally:
         rp.engine.dispose()
-    print(token)
     return 0
 
 
