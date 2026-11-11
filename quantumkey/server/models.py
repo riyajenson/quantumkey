@@ -28,6 +28,8 @@ class Credential(Base):
     policy_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False)  # active | revoked
     replaced_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Self-reported by the client at registration or migration; not attested.
+    device_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[float] = mapped_column(Float, nullable=False)
 
 

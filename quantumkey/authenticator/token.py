@@ -6,13 +6,15 @@ is NOT tamper resistant: it is a process boundary, and its keys exist only in
 that process's memory for its lifetime.
 
 Wire format: 4-byte big-endian length, then a UTF-8 JSON object, max 64 KiB.
-Commands: create, public, sign. There is deliberately no command that exports
-a private key and no command that signs caller-supplied bytes.
+Commands: info, create, public, sign. There is deliberately no command that
+exports a private key and no command that signs caller-supplied bytes. `info`
+returns the token's device id, random per token process.
 """
 
 from __future__ import annotations
 
 import json
+import secrets
 import struct
 import subprocess
 import sys
@@ -31,6 +33,7 @@ from quantumkey.protocol.policy import Policy, PolicyError
 
 MAX_FRAME = 65536
 _COMMANDS = {
+    "info": {"cmd"},
     "create": {"cmd", "algorithm", "policy", "credential_id"},
     "public": {"cmd", "credential_id"},
     "sign": {"cmd", "credential_id", "operation", "rp_id", "transaction_id", "challenge", "target"},
@@ -91,7 +94,7 @@ def _operation(value: object) -> Operation:
     return Operation(value)
 
 
-def handle(core: SigningCore, message: dict) -> dict:
+def handle(core: SigningCore, message: dict, device_id: str = "") -> dict:
     command = message.get("cmd")
     allowed = _COMMANDS.get(command) if isinstance(command, str) else None
     if allowed is None:
@@ -99,6 +102,8 @@ def handle(core: SigningCore, message: dict) -> dict:
     if not set(message) <= allowed:
         return {"ok": False, "error": "unexpected field"}
     try:
+        if command == "info":
+            return {"ok": True, "device_id": device_id}
         if command == "create":
             policy = Policy.from_bytes(crypto.b64d(_text(message, "policy")))
             public, _private = core.create(
@@ -137,6 +142,7 @@ def handle(core: SigningCore, message: dict) -> dict:
 
 def serve(stdin: BinaryIO, stdout: BinaryIO) -> None:
     core = SigningCore()
+    device_id = "qkd-" + secrets.token_hex(16)
     while True:
         try:
             message = read_frame(stdin)
@@ -145,7 +151,7 @@ def serve(stdin: BinaryIO, stdout: BinaryIO) -> None:
             return  # framing is lost; a real device would reset
         if message is None:
             return
-        write_frame(stdout, handle(core, message))
+        write_frame(stdout, handle(core, message, device_id))
 
 
 class VirtualToken:
@@ -157,6 +163,7 @@ class VirtualToken:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
+        self._device_id: str | None = None
 
     def __enter__(self) -> "VirtualToken":
         return self
@@ -178,6 +185,12 @@ class VirtualToken:
         if not reply.get("ok"):
             raise SigningRefused(reply.get("error", "token error"))
         return reply
+
+    @property
+    def device_id(self) -> str:
+        if self._device_id is None:
+            self._device_id = self._call({"cmd": "info"})["device_id"]
+        return self._device_id
 
     @staticmethod
     def _public(reply: dict) -> PublicCredential:

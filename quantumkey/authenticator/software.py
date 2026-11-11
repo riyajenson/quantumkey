@@ -38,6 +38,7 @@ class SoftwareSigner:
         if unlock_ttl < 0:
             raise ValueError("unlock_ttl must not be negative")
         self.vault = Vault(vault_path, kdf=kdf)
+        self.device_id = self.vault.device_id
         self.unlock_ttl = unlock_ttl
         self._pin = pin
         self._clock = clock

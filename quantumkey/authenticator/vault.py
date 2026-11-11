@@ -12,6 +12,7 @@ can still use or extract the key.
 from __future__ import annotations
 
 import os
+import secrets
 import sqlite3
 import struct
 from contextlib import contextmanager
@@ -135,6 +136,18 @@ class Vault:
                 )"""
             )
             self._upgrade_v2(db)
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS vault_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+            )
+            # A random, stable identity for this vault (the "device"). It is a
+            # label for the relying party, not a secret and not an attestation.
+            db.execute(
+                "INSERT OR IGNORE INTO vault_meta VALUES ('device_id', ?)",
+                ("qkd-" + secrets.token_hex(16),),
+            )
+            (self.device_id,) = db.execute(
+                "SELECT value FROM vault_meta WHERE key = 'device_id'"
+            ).fetchone()
 
     @contextmanager
     def _db(self) -> Iterator[sqlite3.Connection]:

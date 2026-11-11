@@ -49,6 +49,7 @@ def test_migration_software_to_token(http, software, token, algorithm):
         "credential_id": old_id,
         "status": "revoked",
         "replaced_by": new_id,
+        "device_id": software.device_id,
     }
     assert http.get(f"/credentials/{new_id}").json()["status"] == "active"
     # The server completes login without knowing which backend signed.
