@@ -28,7 +28,7 @@ Remote attacker without an account; network attacker; attacker with a copy of th
 | T-12 | Policy swap | Policy hash bound into signatures and vault AAD | `test_registration_rejects_swapped_policy`, `test_tampered_vault_policy_is_detected` | — |
 | T-13 | Cross-operation replay | Operation byte in the message; migration needs a `migrate` signature | `test_signature_for_one_operation_is_useless_for_another` | — |
 | T-14 | Algorithm downgrade | Algorithm in the signed message; the server fixes it at start | message tests | — |
-| T-15 | Session token theft | Not addressed (token not stored or verified) | — | Open |
+| T-15 | Session token theft | Server-side sessions: only the token's SHA-256 is stored, one-hour expiry, logout, and migration ends the old credential's sessions | `tests/server/test_account_sessions.py` | A stolen token works until it expires or is logged out; no binding to the client (TLS assumed) |
 | T-16 | User enumeration | Not addressed (`/auth/login/start` returns 404 for unknown users) | — | Open |
 | T-17 | Resource exhaustion through challenge flooding | Per-IP rate limit, body-size cap, purge of expired rows | `tests/server/test_limits.py` | Per process; a distributed source is not limited |
 | T-18 | Device impersonation | Device id recorded per credential for the user's and operator's information only; no decision depends on it | `test_device_identity.py` | Self-reported: any client can claim any id. Attestation would need a device key, as on a hardware token |
