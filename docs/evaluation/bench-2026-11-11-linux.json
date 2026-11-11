@@ -1,0 +1,171 @@
+{
+  "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+  "python": "3.12.16",
+  "processor": "",
+  "note": "in-process HTTP (no network); liboqs 0.16.0 Release build on GitHub Actions ubuntu-26.04",
+  "pid": 16285,
+  "results": [
+    {
+      "algorithm": "ML-DSA-44",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 1312,
+        "signature": 2420
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.019,
+          "mean_ms": 0.05,
+          "p95_ms": 0.624
+        },
+        "sign": {
+          "median_ms": 0.052,
+          "mean_ms": 0.058,
+          "p95_ms": 0.102
+        },
+        "verify": {
+          "median_ms": 0.02,
+          "mean_ms": 0.022,
+          "p95_ms": 0.033
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 271.109,
+          "mean_ms": 275.69,
+          "p95_ms": 351.956
+        },
+        "login_end_to_end": {
+          "median_ms": 139.731,
+          "mean_ms": 140.908,
+          "p95_ms": 160.447
+        },
+        "login_end_to_end_in_session": {
+          "median_ms": 7.193,
+          "mean_ms": 8.943,
+          "p95_ms": 36.87
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 126.724,
+          "mean_ms": 126.171,
+          "p95_ms": 128.74
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 5410,
+        "register_response_total": 290,
+        "login_request_total": 3354,
+        "login_response_total": 352
+      },
+      "server_db_bytes_per_credential": 2458
+    },
+    {
+      "algorithm": "ML-DSA-65",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 1952,
+        "signature": 3309
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.029,
+          "mean_ms": 0.036,
+          "p95_ms": 0.153
+        },
+        "sign": {
+          "median_ms": 0.057,
+          "mean_ms": 0.065,
+          "p95_ms": 0.16
+        },
+        "verify": {
+          "median_ms": 0.029,
+          "mean_ms": 0.03,
+          "p95_ms": 0.041
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 271.216,
+          "mean_ms": 271.436,
+          "p95_ms": 283.557
+        },
+        "login_end_to_end": {
+          "median_ms": 137.149,
+          "mean_ms": 137.577,
+          "p95_ms": 143.022
+        },
+        "login_end_to_end_in_session": {
+          "median_ms": 7.071,
+          "mean_ms": 7.238,
+          "p95_ms": 8.474
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 126.624,
+          "mean_ms": 126.294,
+          "p95_ms": 130.159
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 7448,
+        "register_response_total": 290,
+        "login_request_total": 4539,
+        "login_response_total": 352
+      },
+      "server_db_bytes_per_credential": 4506
+    },
+    {
+      "algorithm": "ML-DSA-87",
+      "iterations": 20,
+      "sizes_bytes": {
+        "public_key": 2592,
+        "signature": 4627
+      },
+      "primitives": {
+        "keygen": {
+          "median_ms": 0.039,
+          "mean_ms": 0.047,
+          "p95_ms": 0.192
+        },
+        "sign": {
+          "median_ms": 0.053,
+          "mean_ms": 0.064,
+          "p95_ms": 0.134
+        },
+        "verify": {
+          "median_ms": 0.039,
+          "mean_ms": 0.041,
+          "p95_ms": 0.051
+        }
+      },
+      "protocol_ms": {
+        "register_end_to_end": {
+          "median_ms": 269.791,
+          "mean_ms": 270.956,
+          "p95_ms": 280.723
+        },
+        "login_end_to_end": {
+          "median_ms": 139.459,
+          "mean_ms": 139.373,
+          "p95_ms": 147.044
+        },
+        "login_end_to_end_in_session": {
+          "median_ms": 7.233,
+          "mean_ms": 7.43,
+          "p95_ms": 9.238
+        },
+        "software_signer_sign_incl_vault_unlock": {
+          "median_ms": 129.55,
+          "mean_ms": 132.297,
+          "p95_ms": 163.35
+        }
+      },
+      "wire_bytes_json": {
+        "register_request_total": 10059,
+        "register_response_total": 290,
+        "login_request_total": 6297,
+        "login_response_total": 351
+      },
+      "server_db_bytes_per_credential": 4506
+    }
+  ]
+}

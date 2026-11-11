@@ -42,6 +42,25 @@ Findings: (1) the ML-DSA operations are a small fraction of login time; about 25
 
 Signing is 20 to 30 times faster than the Windows Debug numbers, and login is about half. The machines differ, so this mixes build type with hardware and is not a controlled comparison. Finding (1) holds and is stronger: ML-DSA is under 0.2 ms of a 163 ms login, so the vault KDF is about 92% of it. Wire sizes and database bytes match the Windows run.
 
+**Vault unlock and sessions (E-04, 2026-11-11).** `docs/evaluation/bench-2026-11-11-linux.json` and `docs/evaluation/kdf-calibration-2026-11-11-linux.json`, both from CI run 43012709769 on a GitHub Actions `ubuntu-26.04` VM, 20 benchmark iterations and 5 calibration repeats.
+
+| Variant | login, cold (median ms) | login inside an unlocked session (median ms) | signer call incl. unlock (median ms) |
+|---|---|---|---|
+| ML-DSA-44 | 140 | 7.2 | 127 |
+| ML-DSA-65 | 137 | 7.1 | 127 |
+| ML-DSA-87 | 139 | 7.2 | 130 |
+
+Argon2id, one derivation, parallelism 1 (median ms):
+
+| Passes | 19 MiB | 46 MiB | 64 MiB | 128 MiB |
+|---|---|---|---|---|
+| 1 | 7.8 | 40 | 62 | 122 |
+| 2 | 15 | 64 | 95 | 191 |
+| 3 | 24 | 91 | **129** (default) | 281 |
+| 4 | 31 | 119 | 166 | 348 |
+
+Findings: (1) An unlocked session cuts login about 19-fold, to 7 ms, because the Argon2id unlock is about 92% of a cold login; the cost is that the key stays in memory for the session. (2) On this runner the default parameters take 129 ms, half of the 250 ms target; the calibration recommends 128 MiB with 2 passes (191 ms) for 250 ms and 128 MiB with 4 passes (348 ms) for 500 ms. (3) A local Windows run with 0.8 GiB of free memory gave erratic numbers (64 MiB went from 60 ms at one pass to 410 ms at two) and was discarded: memory-hard KDF timings are only meaningful on an unloaded machine. Whether to raise the default is a decision, not a measurement; the calibration only shows what fits a time budget on one machine.
+
 ## Prior art (searched 2026-11-06; limited, not a literature review)
 
 - Mitra and Sethuraman, *The Qey: Implementation and performance study of post quantum cryptography in FIDO2*, arXiv:2510.21353 (2025).
