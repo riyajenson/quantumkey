@@ -100,6 +100,64 @@ def test_policy_from_bytes_only_raises_policy_error():
         assert policy.canonical_bytes() == data
 
 
+# -- token frames and commands ----------------------------------------------------
+
+
+def frame(body: bytes) -> bytes:
+    return struct.pack(">I", len(body)) + body
+
+
+@pytest.mark.parametrize("data", DEEP, ids=DEEP_IDS)
+def test_token_frame_rejects_deeply_nested_json(data):
+    with pytest.raises(token.FrameError):
+        token.read_frame(io.BytesIO(frame(data)))
+
+
+def test_token_read_frame_only_raises_frame_error():
+    rng = random.Random(4)
+    seeds = [frame(json.dumps({"cmd": "public", "credential_id": "c1"}).encode()), frame(b"{}")]
+    for i in range(ROUNDS):
+        data = rng.randbytes(rng.randint(0, 64)) if i % 5 == 0 else mutate(rng, rng.choice(seeds))
+        try:
+            token.read_frame(io.BytesIO(data))
+        except token.FrameError:
+            pass
+
+
+def test_token_handle_always_answers():
+    rng = random.Random(5)
+    core = SigningCore()
+    core.create("ML-DSA-44", Policy(rp_id=RP_ID), "c1")
+    values = [None, True, 0, 2, -1, 2**64, 1.5, "", "c1", "x" * 100, [], {}, ["login"],
+              crypto.b64e(b"\x01" * 32), crypto.b64e(b"[" * 3000), {"credential_id": 1}]
+    keys = ["cmd", "credential_id", "operation", "rp_id", "transaction_id", "challenge",
+            "target", "algorithm", "policy", "x"]
+    commands = ["info", "create", "public", "sign", "export", 1, None]
+    for _ in range(ROUNDS):
+        msg = {k: rng.choice(values) for k in rng.sample(keys, rng.randint(0, len(keys)))}
+        msg["cmd"] = rng.choice(commands)
+        reply = token.handle(core, msg, device_id="d")
+        assert isinstance(reply, dict) and isinstance(reply.get("ok"), bool)
+
+
+def test_token_create_with_a_deeply_nested_policy_is_refused():
+    reply = token.handle(
+        SigningCore(),
+        {"cmd": "create", "algorithm": "ML-DSA-44", "credential_id": "c",
+         "policy": crypto.b64e(b"[" * 50_000)},
+    )
+    assert reply["ok"] is False
+
+
+def test_token_process_survives_a_deeply_nested_frame():
+    stream = io.BytesIO(frame(b"[" * 50_000) + frame(b'{"cmd":"info"}'))
+    out = io.BytesIO()
+    token.serve(stream, out)
+    out.seek(0)
+    first = token.read_frame(out)
+    assert first["ok"] is False
+
+
 # -- HTTP API ----------------------------------------------------------------------
 
 
