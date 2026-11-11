@@ -70,6 +70,7 @@ class AuthClient:
                 "public_key": crypto.b64e(public.public_key),
                 "policy": crypto.b64e(policy.canonical_bytes()),
                 "signature": crypto.b64e(signature),
+                "device_id": signer.device_id,
             },
         )
         return credential_id
@@ -125,6 +126,7 @@ class AuthClient:
                 "new_policy": crypto.b64e(policy.canonical_bytes()),
                 "old_signature": crypto.b64e(old_signature),
                 "new_signature": crypto.b64e(new_signature),
+                "new_device_id": new_signer.device_id,
             },
         )
         return new_id

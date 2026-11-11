@@ -49,10 +49,15 @@ jobs:
           python -m quantumkey.bench --iterations 20 \
             --note "in-process HTTP (no network); liboqs ${LIBOQS_VERSION} Release build on GitHub Actions ubuntu-26.04" \
             > bench-linux.json
+      - name: Calibrate Argon2id (E-04)
+        run: |
+          python -m quantumkey.authenticator.calibrate --target-ms 250 500 1000 --repeats 5 --json kdf-calibration-linux.json
       - uses: actions/upload-artifact@v7
         with:
           name: bench-linux
-          path: bench-linux.json
+          path: |
+            bench-linux.json
+            kdf-calibration-linux.json
 
   docker:
     runs-on: ubuntu-26.04

@@ -49,6 +49,7 @@ class RegisterComplete(_Body):
     public_key: Blob
     policy: Blob
     signature: Blob
+    device_id: Ident | None = None
 
 
 class LoginStart(_Body):
@@ -75,6 +76,7 @@ class MigrateComplete(_Body):
     new_policy: Blob
     old_signature: Blob
     new_signature: Blob
+    new_device_id: Ident | None = None
 
 
 def _decode(value: str) -> bytes:
@@ -137,6 +139,7 @@ def create_app(
             _decode(body.public_key),
             _decode(body.policy),
             _decode(body.signature),
+            body.device_id,
         )
         return {"credential_id": body.credential_id, "status": "active"}
 
@@ -166,12 +169,18 @@ def create_app(
             _decode(body.new_policy),
             _decode(body.old_signature),
             _decode(body.new_signature),
+            body.new_device_id,
         )
         return {"credential_id": new_id, "status": "active"}
 
     @app.get("/credentials/{credential_id}")
     def credential_status(credential_id: str) -> dict:
-        status, replaced_by = rp.credential_status(credential_id)
-        return {"credential_id": credential_id, "status": status, "replaced_by": replaced_by}
+        status, replaced_by, device_id = rp.credential_status(credential_id)
+        return {
+            "credential_id": credential_id,
+            "status": status,
+            "replaced_by": replaced_by,
+            "device_id": device_id,
+        }
 
     return app

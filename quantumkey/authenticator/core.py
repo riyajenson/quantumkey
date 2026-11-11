@@ -54,6 +54,8 @@ class PublicCredential:
 class Signer(Protocol):
     """Contract shared by software and (virtual) hardware signers."""
 
+    device_id: str  # self-reported identity of the device holding the keys
+
     def create_credential(
         self, algorithm: str, policy: Policy, credential_id: str
     ) -> PublicCredential: ...

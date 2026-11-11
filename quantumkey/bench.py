@@ -1,7 +1,8 @@
 """Phase 6 evaluation: end-to-end cost of the QuantumKey protocol per ML-DSA variant.
 
 Measures, per variant: primitive latency (keygen/sign/verify), full protocol
-latency (register / login / migrate through the HTTP app, in-process), wire
+latency (register / login through the HTTP app, in-process, with and without
+an unlocked vault session), wire
 bytes of the request and response bodies, and server database growth per
 credential. Prints JSON. Numbers describe the machine and build that produced
 them and are not release-performance claims.
@@ -27,6 +28,7 @@ from quantumkey.authenticator.client import AuthClient
 from quantumkey.authenticator.core import SignRequest
 from quantumkey.authenticator.software import SoftwareSigner
 from quantumkey.protocol.message import Operation
+from quantumkey.protocol.policy import Policy
 from quantumkey.server.app import create_app
 
 RP_ID = "bench.local"
@@ -107,6 +109,21 @@ def bench_variant(algorithm: str, iterations: int, workdir: Path) -> dict:
     request = SignRequest(Operation.LOGIN, RP_ID, "tx", b"\x00" * 32)
     core_ms = [timed(lambda: signer.sign(credential.credential_id, request)) for _ in range(iterations)]
 
+    # The same login inside an unlocked session (unlock_ttl): registration opens
+    # it and every timed login reuses the key. A high policy rate cap keeps the
+    # signer's own per-minute limit out of the measurement.
+    session_signer = SoftwareSigner(
+        workdir / f"vault-{algorithm}.sqlite3", pin="bench-pin", unlock_ttl=3600
+    )
+    client.register(
+        "session-user",
+        session_signer,
+        algorithm=algorithm,
+        policy=Policy(rp_id=RP_ID, max_signs_per_minute=100_000),
+        invite=http.app.state.rp.issue_invite("session-user"),
+    )
+    session_ms = [timed(lambda: client.login("session-user", session_signer)) for _ in range(iterations)]
+
     http.app.state.rp.engine.dispose()
     public_size, signature_size = crypto.SIZES[algorithm]
     return {
@@ -117,6 +134,7 @@ def bench_variant(algorithm: str, iterations: int, workdir: Path) -> dict:
         "protocol_ms": {
             "register_end_to_end": summary(register_ms),
             "login_end_to_end": summary(login_ms),
+            "login_end_to_end_in_session": summary(session_ms),
             "software_signer_sign_incl_vault_unlock": summary(core_ms),
         },
         "wire_bytes_json": {

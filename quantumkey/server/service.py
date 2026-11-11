@@ -240,8 +240,11 @@ class RelyingParty:
         public_key: bytes,
         policy_bytes: bytes,
         signature: bytes,
+        device_id: str | None = None,
     ) -> None:
         self._check_ids(credential_id)
+        if device_id is not None:
+            self._check_ids(device_id)
         challenge = self._consume(transaction_id, "register")
         self._check_key(challenge.algorithm, public_key)
         policy = self._parse_policy(policy_bytes)
@@ -281,6 +284,7 @@ class RelyingParty:
                         policy=policy_bytes,
                         policy_hash=policy.digest(),
                         status="active",
+                        device_id=device_id,
                         created_at=now,
                     )
                 )
@@ -359,9 +363,12 @@ class RelyingParty:
         new_policy_bytes: bytes,
         old_signature: bytes,
         new_signature: bytes,
+        new_device_id: str | None = None,
     ) -> str:
         """Activate a new credential authorized by the old one; revoke the old."""
         self._check_ids(new_credential_id)
+        if new_device_id is not None:
+            self._check_ids(new_device_id)
         challenge = self._consume(transaction_id, "migrate")
         self._check_key(challenge.algorithm, new_public_key)
         new_policy = self._parse_policy(new_policy_bytes)
@@ -412,6 +419,7 @@ class RelyingParty:
                         policy=new_policy_bytes,
                         policy_hash=new_policy.digest(),
                         status="active",
+                        device_id=new_device_id,
                         created_at=now,
                     )
                 )
@@ -421,9 +429,9 @@ class RelyingParty:
 
     # -- inspection ----------------------------------------------------------------
 
-    def credential_status(self, credential_id: str) -> tuple[str, str | None]:
+    def credential_status(self, credential_id: str) -> tuple[str, str | None, str | None]:
         with Session(self.engine) as session:
             credential = session.get(Credential, credential_id)
             if credential is None:
                 raise ProtocolError("unknown_credential", 404)
-            return credential.status, credential.replaced_by
+            return credential.status, credential.replaced_by, credential.device_id

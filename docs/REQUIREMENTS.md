@@ -29,10 +29,12 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 | FR-09 | Software private keys are stored only in the encrypted vault | `quantumkey/authenticator/vault.py`; `test_wrong_pin_cannot_sign_and_data_stays_private` |
 | FR-10 | A credential can be migrated to another signer without key export; the old one is revoked | `tests/e2e/test_migration.py` |
 | FR-11 | Credentials carry a signing policy enforced by the signer | `test_signer_enforces_rate_limit_and_expiry`; `test_token_enforces_policy_for_a_malicious_host` |
-| FR-12 | Protocol and vault formats are versioned | `DOMAIN = b"QuantumKey/v1\0"`; vault `format_version` |
+| FR-12 | Protocol and vault formats are versioned; older vaults are upgraded in place | `DOMAIN = b"QuantumKey/v1\0"`; vault `format_version`; `test_v2_vault_is_upgraded_in_place_and_still_unlocks` |
 | FR-13 | Users can revoke a credential directly | **Open** (only migration revokes) |
 | FR-14 | User presence / user verification is distinguished | **Open** |
 | FR-15 | First registration of a username requires a single-use, expiring invite issued by the operator | `tests/server/test_enrollment.py` |
+| FR-16 | Users can delete a credential from the vault and change the vault PIN | `cli delete`, `cli change-pin`; `tests/authenticator/` |
+| FR-17 | The relying party records which device each credential was created on | `device_id` on credentials; `tests/authenticator/test_device_identity.py` (self-reported, not attested) |
 
 ## 4. Security requirements
 

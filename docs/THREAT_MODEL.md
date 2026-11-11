@@ -31,6 +31,7 @@ Remote attacker without an account; network attacker; attacker with a copy of th
 | T-15 | Session token theft | Not addressed (token not stored or verified) | — | Open |
 | T-16 | User enumeration | Not addressed (`/auth/login/start` returns 404 for unknown users) | — | Open |
 | T-17 | Resource exhaustion through challenge flooding | Per-IP rate limit, body-size cap, purge of expired rows | `tests/server/test_limits.py` | Per process; a distributed source is not limited |
+| T-18 | Device impersonation | Device id recorded per credential for the user's and operator's information only; no decision depends on it | `test_device_identity.py` | Self-reported: any client can claim any id. Attestation would need a device key, as on a hardware token |
 
 ## 4. Explicit exclusions
 
