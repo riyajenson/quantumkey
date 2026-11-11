@@ -36,6 +36,8 @@ then 7 fields, each a 4-byte big-endian length + bytes, in this order:
 | POST | `/auth/register/complete` | `{transaction_id, credential_id, public_key, policy, signature, device_id?}` | 201 `{credential_id, status}` |
 | POST | `/auth/login/start` | `{username, credential_id?}` | started object incl. `credential_id` |
 | POST | `/auth/login/complete` | `{transaction_id, credential_id, signature}` | `{authenticated, session_token}` |
+| GET | `/auth/session` | header `Authorization: Bearer <session_token>` | `{username, credential_id, expires_at}` |
+| POST | `/auth/logout` | `{}` and the bearer header | `{status: "logged_out"}` |
 | POST | `/auth/migrate/start` | `{username, credential_id, algorithm?}` | started object incl. old `credential_id` |
 | POST | `/auth/migrate/complete` | `{transaction_id, new_credential_id, new_public_key, new_policy, old_signature, new_signature, new_device_id?}` | `{credential_id, status}` |
 | GET | `/credentials/{id}` | — | `{credential_id, status, replaced_by, device_id}` |
@@ -48,6 +50,7 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 - A challenge is consumed by one conditional `UPDATE ... WHERE used_at IS NULL AND expires_at > now`, **before** signature checks. A failed attempt therefore burns it.
 - Registration requires a single-use invite bound to the username, issued by the operator (`python -m quantumkey.server.admin invite <username>`, default lifetime 24 h). Only the token's SHA-256 is stored. `register/start` checks the invite before the username, so without a valid invite a taken name is indistinguishable from any other refusal. `register/complete` spends the invite in the same transaction that creates the account, after the signature verifies: a failed signature leaves the invite usable, and concurrent completions on one invite allow exactly one.
 - `device_id` / `new_device_id` (optional, at most 64 characters) name the device that holds the new credential: the vault's or virtual token's random id. The server stores and reports it but cannot verify it: it is self-reported, not signed and not an attestation.
+- A successful login opens a session for one hour. Only the token's SHA-256 is stored. A missing, malformed, unknown, expired or logged-out token is `invalid_session` (401). Migration ends the old credential's sessions; expired sessions are purged with the other expired rows.
 - Registration only creates new accounts. Adding a credential to an existing account requires migration, which the existing credential must authorize.
 - Migration verifies two signatures: the old credential over the `migrate` message, and the new key over a `register` proof with the same transaction. It then revokes the old credential and inserts the new one in one transaction.
 - The server re-checks the stored policy's RP, allowed operations and expiry on login and migrate.
@@ -61,6 +64,7 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 | `invalid_challenge` | 400 | Unknown, expired, reused or wrong-purpose transaction |
 | `credential_mismatch` | 400 | Credential differs from the one the challenge was issued for |
 | `invalid_signature` | 401 | Verification failed |
+| `invalid_session` | 401 | No live session for the bearer token |
 | `policy_violation` | 403 | Stored policy forbids the operation or has expired |
 | `invalid_invite` | 403 | Unknown, expired, used, or other-username invite (all identical) |
 | `unknown_credential` | 404 | No active credential (also returned for an unknown user at login) |
@@ -72,4 +76,4 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 
 ## 6. Open items
 
-Direct revocation endpoint, session management for `session_token` (currently issued and not stored), rate limits shared across server processes, account recovery, and user-enumeration resistance at `/auth/login/start`.
+Direct revocation endpoint, rate limits shared across server processes, account recovery, and user-enumeration resistance at `/auth/login/start`.
