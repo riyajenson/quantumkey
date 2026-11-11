@@ -10,7 +10,7 @@ import os
 import time
 from typing import Annotated, Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -57,6 +57,10 @@ class LoginStart(_Body):
     credential_id: Ident | None = None
 
 
+class Empty(_Body):
+    pass
+
+
 class LoginComplete(_Body):
     transaction_id: Ident
     credential_id: Ident
@@ -77,6 +81,15 @@ class MigrateComplete(_Body):
     old_signature: Blob
     new_signature: Blob
     new_device_id: Ident | None = None
+
+
+def _bearer(authorization: str | None) -> str:
+    """The token from `Authorization: Bearer <token>`; anything else is treated
+    like an unknown token."""
+    scheme, _, token = (authorization or "").partition(" ")
+    if scheme.lower() != "bearer" or not token or len(token) > 128:
+        raise ProtocolError("invalid_session", 401)
+    return token
 
 
 def _decode(value: str) -> bytes:
@@ -153,6 +166,16 @@ def create_app(
             body.transaction_id, body.credential_id, _decode(body.signature)
         )
         return {"authenticated": True, "session_token": token}
+
+    @app.get("/auth/session")
+    def session_info(authorization: Annotated[str | None, Header()] = None) -> dict:
+        username, credential_id, expires_at = rp.session_info(_bearer(authorization))
+        return {"username": username, "credential_id": credential_id, "expires_at": expires_at}
+
+    @app.post("/auth/logout")
+    def logout(_: Empty, authorization: Annotated[str | None, Header()] = None) -> dict:
+        rp.logout(_bearer(authorization))
+        return {"status": "logged_out"}
 
     @app.post("/auth/migrate/start")
     def migrate_start(body: MigrateStart) -> dict:

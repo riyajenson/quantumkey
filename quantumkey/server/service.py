@@ -23,12 +23,20 @@ from quantumkey import crypto
 from quantumkey.protocol.message import Operation, SignedMessage
 from quantumkey.protocol.migration import migration_binding
 from quantumkey.protocol.policy import Policy, PolicyError
-from quantumkey.server.models import Base, Challenge, Credential, EnrollmentInvite, User
+from quantumkey.server.models import (
+    AuthSession,
+    Base,
+    Challenge,
+    Credential,
+    EnrollmentInvite,
+    User,
+)
 
 PROTOCOL_VERSION = 1
 MAX_ID_LENGTH = 64
 INVITE_TTL = 24 * 60 * 60  # seconds
 PURGE_INTERVAL = 60.0  # seconds between automatic purges
+SESSION_TTL = 60 * 60  # seconds
 
 
 class ProtocolError(Exception):
@@ -332,7 +340,42 @@ class RelyingParty:
             )
         if not valid:
             raise ProtocolError("invalid_signature", 401)
-        return secrets.token_urlsafe(32)
+        return self._open_session(challenge.username, credential_id)
+
+    # -- sessions ------------------------------------------------------------------
+
+    def _open_session(self, username: str, credential_id: str) -> str:
+        token = secrets.token_urlsafe(32)
+        now = self.clock()
+        with Session(self.engine) as session, session.begin():
+            session.add(
+                AuthSession(
+                    token_hash=hashlib.sha256(token.encode()).digest(),
+                    username=username,
+                    credential_id=credential_id,
+                    expires_at=now + SESSION_TTL,
+                    created_at=now,
+                )
+            )
+        return token
+
+    def session_info(self, token: str) -> tuple[str, str, float]:
+        """Return (username, credential_id, expires_at) for a live session.
+        Unknown and expired tokens fail identically."""
+        with Session(self.engine) as session:
+            row = session.get(AuthSession, hashlib.sha256(token.encode()).digest())
+            if row is None or row.expires_at <= self.clock():
+                raise ProtocolError("invalid_session", 401)
+            return row.username, row.credential_id, row.expires_at
+
+    def logout(self, token: str) -> None:
+        self.session_info(token)
+        with Session(self.engine) as session, session.begin():
+            session.execute(
+                delete(AuthSession).where(
+                    AuthSession.token_hash == hashlib.sha256(token.encode()).digest()
+                )
+            )
 
     def _enforce_server_policy(self, credential: Credential, operation: Operation) -> None:
         try:

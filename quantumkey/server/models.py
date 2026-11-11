@@ -60,3 +60,15 @@ class EnrollmentInvite(Base):
     expires_at: Mapped[float] = mapped_column(Float, nullable=False, index=True)
     used_at: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[float] = mapped_column(Float, nullable=False)
+
+
+class AuthSession(Base):
+    """A login session. Only the bearer token's SHA-256 is stored."""
+
+    __tablename__ = "sessions"
+
+    token_hash: Mapped[bytes] = mapped_column(LargeBinary, primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), nullable=False)
+    credential_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    expires_at: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    created_at: Mapped[float] = mapped_column(Float, nullable=False)
