@@ -45,7 +45,7 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 | SEC-04 | Consume the challenge before verification, so each challenge allows one attempt | Met |
 | SEC-05 | Strict parsing: canonical base64url, unknown JSON fields rejected, length limits | Met |
 | SEC-06 | Never log or transmit private keys, PINs or derived keys | Met by review. No logging of secrets exists |
-| SEC-07 | Server-side rate limiting and request-size limits | Partial (field length limits; no rate limiting) |
+| SEC-07 | Server-side rate limiting and request-size limits | Met: 60 POSTs/min per IP, 64 KB body cap, field length limits (`tests/server/test_limits.py`). Limits are per process |
 | SEC-08 | Revocation, recovery and account-recovery abuse controls | Partial (revocation through migration only) |
 | SEC-09 | Host, token, transport and server are treated as separate trust domains | Met in design; token is a process, not a device |
 | SEC-10 | Limitations of software key storage are documented | Met (`docs/VAULT_SPECIFICATION.md`) |
@@ -55,4 +55,4 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 - **Latency:** interactive login under 1 s on the development machine (measured about 325 ms median).
 - **Reproducibility:** pinned dependencies, documented setup, automated tests (`python -m pytest -q`).
 - **Portability:** Windows 11 validated locally; Linux (Ubuntu, GitHub Actions) validated in CI. macOS open.
-- **Migration:** server schema changes will need Alembic. Currently `create_all` only (open).
+- **Migration:** server schema changes go through Alembic (`migrations/`); a test checks that the migrations match the models.

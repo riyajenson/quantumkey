@@ -50,6 +50,8 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 - Registration only creates new accounts. Adding a credential to an existing account requires migration, which the existing credential must authorize.
 - Migration verifies two signatures: the old credential over the `migrate` message, and the new key over a `register` proof with the same transaction. It then revokes the old credential and inserts the new one in one transaction.
 - The server re-checks the stored policy's RP, allowed operations and expiry on login and migrate.
+- Every POST under `/auth/` counts toward a limit of 60 per client IP per minute (the window starts at that IP's first request) and must send a `Content-Length` of at most 64 KB. Both checks run before the body is read. The counts are per server process and reset on restart; the client IP is the socket peer (X-Forwarded-For is not trusted).
+- Expired challenges and expired or used invites are deleted at most once a minute when a challenge is issued, and by `python -m quantumkey.server.admin purge`.
 
 ## 5. Error codes
 
@@ -62,8 +64,11 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 | `invalid_invite` | 403 | Unknown, expired, used, or other-username invite (all identical) |
 | `unknown_credential` | 404 | No active credential (also returned for an unknown user at login) |
 | `user_exists` / `already_registered` | 409 | Account or credential id already exists |
+| `length_required` | 411 | POST under `/auth/` without a `Content-Length` |
+| `request_too_large` | 413 | Body larger than 64 KB |
 | `invalid_encoding`, `invalid_identifier`, `invalid_public_key`, `invalid_policy`, `unsupported_algorithm` | 422 | Malformed input |
+| `rate_limited` | 429 | Over 60 POSTs under `/auth/` from this IP in the current minute; `Retry-After` gives the seconds to wait |
 
 ## 6. Open items
 
-Direct revocation endpoint, session management for `session_token` (currently issued and not stored), server-side rate limiting, account recovery, and user-enumeration resistance at `/auth/login/start`.
+Direct revocation endpoint, session management for `session_token` (currently issued and not stored), rate limits shared across server processes, account recovery, and user-enumeration resistance at `/auth/login/start`.

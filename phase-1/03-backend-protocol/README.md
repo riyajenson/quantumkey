@@ -12,4 +12,4 @@
 | Migration protocol | [`docs/decisions/0006-key-export-free-migration.md`](../../docs/decisions/0006-key-export-free-migration.md) |
 | Trust boundaries | [`docs/THREAT_MODEL.md`](../../docs/THREAT_MODEL.md) |
 
-**Known limits:** no rate limiting (`docs/RISK_REGISTER.md`, R-10). First registration requires an invite (R-02, mitigated).
+**Known limits:** rate limits are per server process (`docs/RISK_REGISTER.md`, R-10, mitigated). First registration requires an invite (R-02, mitigated).

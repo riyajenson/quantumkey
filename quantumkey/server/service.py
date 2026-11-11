@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
-from sqlalchemy import create_engine, select, update
+from sqlalchemy import create_engine, delete, or_, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -28,6 +28,7 @@ from quantumkey.server.models import Base, Challenge, Credential, EnrollmentInvi
 PROTOCOL_VERSION = 1
 MAX_ID_LENGTH = 64
 INVITE_TTL = 24 * 60 * 60  # seconds
+PURGE_INTERVAL = 60.0  # seconds between automatic purges
 
 
 class ProtocolError(Exception):
@@ -60,6 +61,7 @@ class RelyingParty:
         self.rp_id = rp_id
         self.clock = clock
         self.challenge_ttl = challenge_ttl
+        self._last_purge = float("-inf")
         kwargs = {"connect_args": {"check_same_thread": False}} if database_url.startswith("sqlite") else {}
         self.engine: Engine = create_engine(database_url, **kwargs)
         if create_schema:  # production deployments run `alembic upgrade head` instead
@@ -76,6 +78,8 @@ class RelyingParty:
         invite_id: str | None = None,
     ) -> Started:
         now = self.clock()
+        if now - self._last_purge >= PURGE_INTERVAL:
+            self.purge_expired()
         started = Started(
             transaction_id=secrets.token_urlsafe(24),
             challenge=secrets.token_bytes(32),
@@ -98,6 +102,23 @@ class RelyingParty:
                 )
             )
         return started
+
+    def purge_expired(self) -> tuple[int, int]:
+        """Delete expired challenges and expired or spent invites; return how many
+        of each. Such rows can never be used again, so this changes no behavior.
+        Runs automatically from _issue at most once per PURGE_INTERVAL."""
+        now = self.clock()
+        self._last_purge = now
+        with Session(self.engine) as session, session.begin():
+            challenges = session.execute(
+                delete(Challenge).where(Challenge.expires_at <= now)
+            ).rowcount
+            invites = session.execute(
+                delete(EnrollmentInvite).where(
+                    or_(EnrollmentInvite.expires_at <= now, EnrollmentInvite.used_at.is_not(None))
+                )
+            ).rowcount
+        return challenges, invites
 
     def _consume(self, transaction_id: str, purpose: str) -> Challenge:
         """Atomically mark the challenge used. Unknown, expired, reused, or

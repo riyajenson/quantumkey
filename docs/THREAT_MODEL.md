@@ -30,10 +30,11 @@ Remote attacker without an account; network attacker; attacker with a copy of th
 | T-14 | Algorithm downgrade | Algorithm in the signed message; the server fixes it at start | message tests | — |
 | T-15 | Session token theft | Not addressed (token not stored or verified) | — | Open |
 | T-16 | User enumeration | Not addressed (`/auth/login/start` returns 404 for unknown users) | — | Open |
+| T-17 | Resource exhaustion through challenge flooding | Per-IP rate limit, body-size cap, purge of expired rows | `tests/server/test_limits.py` | Per process; a distributed source is not limited |
 
 ## 4. Explicit exclusions
 
-Physical, fault-injection and side-channel attacks; compromised liboqs or Python runtime; denial of service; TLS configuration.
+Physical, fault-injection and side-channel attacks; compromised liboqs or Python runtime; denial of service beyond the per-IP limits of T-17; TLS configuration.
 
 ## 5. Risk register (top items)
 

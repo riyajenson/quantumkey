@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from quantumkey import crypto
+from quantumkey.server.limits import RateLimiter, RequestGuard
 from quantumkey.server.service import (
     PROTOCOL_VERSION,
     ProtocolError,
@@ -22,6 +23,9 @@ from quantumkey.server.service import (
     Started,
 )
 
+
+RATE_LIMIT_PER_MINUTE = 60  # POSTs under /auth/ per client IP
+MAX_BODY_BYTES = 64 * 1024  # the largest valid request (migrate, ML-DSA-87) is ~20 KB
 
 # Size limits. A base64url ML-DSA-87 signature is 6,170 characters.
 Ident = Annotated[str, Field(min_length=1, max_length=64)]
@@ -101,6 +105,8 @@ def create_app(
     clock: Callable[[], float] = time.time,
     challenge_ttl: float = 60.0,
     create_schema: bool = True,
+    rate_limit: int | None = RATE_LIMIT_PER_MINUTE,
+    max_body: int = MAX_BODY_BYTES,
 ) -> FastAPI:
     url = database_url or os.environ.get("QK_DATABASE_URL", "sqlite:///quantumkey.sqlite3")
     rp = RelyingParty(
@@ -108,6 +114,8 @@ def create_app(
     )
     app = FastAPI(title="QuantumKey relying party (research prototype)")
     app.state.rp = rp
+    limiter = RateLimiter(rate_limit, 60.0, clock) if rate_limit is not None else None
+    app.add_middleware(RequestGuard, limiter=limiter, max_body=max_body)
 
     @app.exception_handler(ProtocolError)
     async def protocol_error(_: Request, exc: ProtocolError) -> JSONResponse:
