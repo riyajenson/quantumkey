@@ -181,3 +181,19 @@ def test_registration_with_a_deeply_nested_policy_is_422_not_500(tmp_path):
         },
     )
     assert (response.status_code, response.json()) == (422, {"error": "invalid_policy"})
+
+
+def test_api_never_answers_500_to_random_bodies(tmp_path):
+    rng = random.Random(6)
+    client = TestClient(create_app(database_url(tmp_path), rp_id=RP_ID, rate_limit=None),
+                        raise_server_exceptions=False)
+    paths = ["/auth/register/start", "/auth/register/complete", "/auth/login/start",
+             "/auth/login/complete", "/auth/migrate/start", "/auth/migrate/complete", "/auth/logout"]
+    values = [None, True, 0, -1, 2**70, 1.5, "", "a", "x" * 70, "AA", "AA==", "@@", [], {}, [1]]
+    fields = ["username", "invite", "algorithm", "credential_id", "transaction_id", "public_key",
+              "policy", "signature", "new_credential_id", "new_public_key", "new_policy",
+              "old_signature", "new_signature", "device_id", "new_device_id"]
+    for _ in range(600):
+        body = {f: rng.choice(values) for f in rng.sample(fields, rng.randint(0, 6))}
+        response = client.post(rng.choice(paths), json=body)
+        assert response.status_code < 500, (body, response.text)
