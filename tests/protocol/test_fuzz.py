@@ -74,3 +74,52 @@ def test_signed_message_decode_only_raises_message_error():
         except MessageError:
             continue
         assert decoded.encode() == data  # anything accepted is canonical
+
+
+# -- Policy ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("data", DEEP, ids=DEEP_IDS)
+def test_policy_rejects_deeply_nested_json(data):
+    with pytest.raises(PolicyError):
+        Policy.from_bytes(data)
+
+
+def test_policy_from_bytes_only_raises_policy_error():
+    rng = random.Random(3)
+    seeds = [
+        Policy(rp_id="rp.example", allowed_ops=("login",), not_after=n, max_signs_per_minute=m).canonical_bytes()
+        for n, m in ((None, 1), (100, 30), (2**31, 999))
+    ]
+    for i in range(ROUNDS):
+        data = rng.randbytes(rng.randint(0, 120)) if i % 5 == 0 else mutate(rng, rng.choice(seeds))
+        try:
+            policy = Policy.from_bytes(data)
+        except PolicyError:
+            continue
+        assert policy.canonical_bytes() == data
+
+
+# -- HTTP API ----------------------------------------------------------------------
+
+
+def test_registration_with_a_deeply_nested_policy_is_422_not_500(tmp_path):
+    client = TestClient(create_app(database_url(tmp_path), rp_id=RP_ID, rate_limit=None),
+                        raise_server_exceptions=False)
+    cred = new_cred()
+    started = start_registration(client, "alice").json()
+    signature = crypto.sign(
+        cred.algorithm, cred.private_key,
+        message(Operation.REGISTER, started, cred, extra=hashlib.sha256(cred.public_key).digest()),
+    )
+    response = client.post(
+        "/auth/register/complete",
+        json={
+            "transaction_id": started["transaction_id"],
+            "credential_id": cred.credential_id,
+            "public_key": crypto.b64e(cred.public_key),
+            "policy": crypto.b64e(b"[" * 6000),
+            "signature": crypto.b64e(signature),
+        },
+    )
+    assert (response.status_code, response.json()) == (422, {"error": "invalid_policy"})
