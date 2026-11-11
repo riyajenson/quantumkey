@@ -453,6 +453,8 @@ class RelyingParty:
                 )
                 if result.rowcount != 1:
                     raise ProtocolError("unknown_credential", 404)
+                # A revoked credential's sessions end with it.
+                session.execute(delete(AuthSession).where(AuthSession.credential_id == old_id))
                 session.add(
                     Credential(
                         credential_id=new_credential_id,

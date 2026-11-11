@@ -16,6 +16,9 @@ from tests.helpers import (
     database_url,
     login_body,
     login_signature,
+    migrate_body,
+    migration_signatures,
+    new_cred,
     register,
 )
 
@@ -103,3 +106,17 @@ def test_sessions_are_independent(client):
     assert token_alice != token_bob
     client.post("/auth/logout", json={}, headers=bearer(token_alice))
     assert client.get("/auth/session", headers=bearer(token_bob)).json()["username"] == "bob"
+
+
+def test_migration_ends_the_old_credentials_sessions(client):
+    old = register(client, "alice")
+    token = login(client, "alice", old)
+    new = new_cred()
+    started = client.post(
+        "/auth/migrate/start", json={"username": "alice", "credential_id": old.credential_id}
+    ).json()
+    old_sig, new_sig = migration_signatures(started, old, new)
+    assert client.post(
+        "/auth/migrate/complete", json=migrate_body(started, new, old_sig, new_sig)
+    ).status_code == 200
+    assert client.get("/auth/session", headers=bearer(token)).status_code == 401
