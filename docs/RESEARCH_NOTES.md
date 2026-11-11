@@ -53,7 +53,7 @@ ML-DSA in FIDO2/WebAuthn is therefore **not** a novelty claim. The three contrib
 ## Known limitations
 
 - The virtual token is a process boundary, not tamper-resistant hardware, and keeps keys only in memory. `cli migrate` therefore migrates into a token that disappears when the command ends; use it to demonstrate the flow, not to keep an account.
-- No credential revocation endpoint, session store, TLS, rate limiting on the server, or account recovery. First registration needs an operator-issued invite, which is a bearer token.
+- No credential revocation endpoint, session store, TLS, or account recovery. Server rate limits are per process. First registration needs an operator-issued invite, which is a bearer token.
 - Server-side policy checks cover relying party, operations and expiry only.
 - Developed on Windows x64 with a Debug-configured liboqs 0.16.0 build that prints a constant-time warning. CI runs the suite on Linux with a Release build and PostgreSQL 17, and that log contains no such warning; absence of the warning is not a constant-time verification. macOS is untested; benchmarks are small (20 iterations on a shared CI VM) and not release numbers.
 - The protocol is a custom, WebAuthn-inspired design, not WebAuthn/CTAP compatible. Its message encoding and migration protocol have had no formal analysis or independent review.
