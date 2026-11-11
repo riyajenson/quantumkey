@@ -41,9 +41,9 @@ def test_purge_removes_expired_challenges_and_spent_or_expired_invites(tmp_path,
     live_invite = rp.issue_invite("carol", ttl=3600)  # stays
     start_registration(client, "dave")  # dave's invite is unused; his challenge is live
     clock.now += 45  # both challenges (60 s) still live; bob's invite (30 s) expired
-    assert rp.purge_expired() == (0, 2)  # alice's used invite and bob's expired one
+    assert rp.purge_expired() == (0, 2, 0)  # alice's used invite and bob's expired one
     clock.now += 30  # both challenges now expired
-    assert rp.purge_expired() == (2, 0)
+    assert rp.purge_expired() == (2, 0, 0)
     assert count(client, Challenge) == 0
     assert count(client, EnrollmentInvite) == 2  # carol's and dave's
     assert client.post(
@@ -87,4 +87,4 @@ def test_admin_purge_command(tmp_path, clock, capsys):
     client = TestClient(create_app(url, rp_id=RP_ID))
     client.app.state.rp.issue_invite("bob", ttl=-1)  # already expired
     assert admin.main(["--database-url", url, "purge"]) == 0
-    assert capsys.readouterr().out.strip() == "purged 0 challenges, 1 invites"
+    assert capsys.readouterr().out.strip() == "purged 0 challenges, 1 invites, 0 sessions"
