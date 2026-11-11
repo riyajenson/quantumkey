@@ -14,7 +14,7 @@
 | E-06 | MCU feasibility (RAM, flash, latency) | Open (analysis only) | `hardware-constraints.md` |
 | E-07 | Can a token enforce allowed signing requests? | **Done** for the virtual token | `tests/e2e/test_migration.py` |
 | E-08 | FPGA benefit | Deferred until E-06 shows a bottleneck | — |
-| E-09 | Robustness against hostile inputs | **Partial**: strict-parser tests; fuzzing open | protocol and token tests |
+| E-09 | Robustness against hostile inputs | **Done** (2026-11-11): seeded fuzzing of the message decoder, policy parser, token frames and commands, HTTP API and client responses. Found that deeply nested JSON escaped as `RecursionError` from the policy parser and the token frame reader (a 500 at registration; a crashed token), and that the client crashed on non-JSON responses; all fixed | `tests/protocol/test_fuzz.py`, `tests/authenticator/test_client_responses.py` |
 | E-10 | Migration correctness (software to token, cross-variant) | **Done** | `tests/e2e/test_migration.py` |
 | E-11 | End-to-end protocol cost per variant | **Done** on Windows Debug and Linux Release (20 iterations each) | `python -m quantumkey.bench`, `docs/evaluation/` |
 
@@ -31,5 +31,5 @@
 2. E-04: record the CI calibration (`kdf-calibration-linux.json` in the `bench-linux` artifact) and the session login numbers, then decide whether to change the default parameters. A local Windows run under memory pressure (0.8 GiB free) was discarded.
 3. Run E-11 against PostgreSQL to replace SQLite's page-quantized storage numbers.
 4. E-03: cross-verify signatures with a second ML-DSA implementation.
-5. E-09: fuzz `SignedMessage.decode` and the token frame parser.
+5. ~~E-09~~ (done 2026-11-11). Coverage-guided fuzzing (for example Atheris) would need a new dependency.
 6. E-06: port the token protocol to an MCU board and measure.
