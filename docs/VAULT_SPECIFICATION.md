@@ -29,6 +29,8 @@ One SQLite table, `credentials`:
 | `format_version` | 3 | No |
 | `kdf_time_cost`, `kdf_memory_kib`, `kdf_parallelism` | Argon2id parameters this row was sealed with | No |
 
+A second table, `vault_meta`, holds `device_id`: a random `qkd-` + 32 hex characters created when the vault is first opened. It identifies the vault to relying parties; it is not secret and proves nothing.
+
 There is no PIN, derived key or plaintext private key on disk (`test_wrong_pin_cannot_sign_and_data_stays_private`). Every connection sets `PRAGMA secure_delete = ON`, so deleted and re-wrapped rows are overwritten in the file (`test_delete_needs_the_pin_and_removes_the_ciphertext_from_the_file`).
 
 ## 4. Cryptography
@@ -53,6 +55,6 @@ There is no PIN, derived key or plaintext private key on disk (`test_wrong_pin_c
 ## 6. Known gaps
 
 - No failed-attempt counter. It could not stop offline guessing against a copied file anyway; a hardware token would be needed.
-- Argon2id parameters are not yet calibrated to a target unlock time on target devices (experiment E-04); the mechanism to change them exists.
-- No device identity: the server has no field for one, so adding it is a protocol change.
+- Argon2id parameters are not yet calibrated on target devices. `python -m quantumkey.authenticator.calibrate` measures a grid and recommends parameters for a target unlock time; `cli change-pin --time-cost T --memory-kib M` applies them (experiment E-04). CI runs the calibration on Linux; a local run on a machine under memory pressure gave unusable numbers, so only clean runs should be reported.
+- The device id is self-reported; nothing stops a modified client from sending another vault's id.
 - Sessions live in one process. The CLI starts a new process per command, so it never benefits from them; a long-running client (the planned GUI) would.

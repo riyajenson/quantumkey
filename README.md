@@ -97,6 +97,7 @@ python -m quantumkey.authenticator.cli --vault vault.sqlite3 login alice
 python -m quantumkey.authenticator.cli --vault vault.sqlite3 change-pin           # new PIN from QK_NEW_PIN or a prompt
 python -m quantumkey.authenticator.cli --vault vault.sqlite3 delete <credential-id>
 python -m quantumkey.bench --iterations 20
+python -m quantumkey.authenticator.calibrate --target-ms 250 500   # Argon2id parameters for a target unlock time
 ```
 
 Or on Linux in Docker, with liboqs built in Release mode:

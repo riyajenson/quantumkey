@@ -33,12 +33,12 @@ then 7 fields, each a 4-byte big-endian length + bytes, in this order:
 |---|---|---|---|
 | GET | `/health` | — | `{status, protocol_version}` |
 | POST | `/auth/register/start` | `{username, invite, algorithm?}` | started object (below) |
-| POST | `/auth/register/complete` | `{transaction_id, credential_id, public_key, policy, signature}` | 201 `{credential_id, status}` |
+| POST | `/auth/register/complete` | `{transaction_id, credential_id, public_key, policy, signature, device_id?}` | 201 `{credential_id, status}` |
 | POST | `/auth/login/start` | `{username, credential_id?}` | started object incl. `credential_id` |
 | POST | `/auth/login/complete` | `{transaction_id, credential_id, signature}` | `{authenticated, session_token}` |
 | POST | `/auth/migrate/start` | `{username, credential_id, algorithm?}` | started object incl. old `credential_id` |
-| POST | `/auth/migrate/complete` | `{transaction_id, new_credential_id, new_public_key, new_policy, old_signature, new_signature}` | `{credential_id, status}` |
-| GET | `/credentials/{id}` | — | `{credential_id, status, replaced_by}` |
+| POST | `/auth/migrate/complete` | `{transaction_id, new_credential_id, new_public_key, new_policy, old_signature, new_signature, new_device_id?}` | `{credential_id, status}` |
+| GET | `/credentials/{id}` | — | `{credential_id, status, replaced_by, device_id}` |
 
 The started object is `{protocol_version, operation, rp_id, transaction_id, challenge, expires_at, algorithm[, credential_id]}`.
 
@@ -47,6 +47,7 @@ The started object is `{protocol_version, operation, rp_id, transaction_id, chal
 - A challenge is 32 random bytes with a 60 s TTL. It is bound to purpose, account, credential (login/migrate) and algorithm.
 - A challenge is consumed by one conditional `UPDATE ... WHERE used_at IS NULL AND expires_at > now`, **before** signature checks. A failed attempt therefore burns it.
 - Registration requires a single-use invite bound to the username, issued by the operator (`python -m quantumkey.server.admin invite <username>`, default lifetime 24 h). Only the token's SHA-256 is stored. `register/start` checks the invite before the username, so without a valid invite a taken name is indistinguishable from any other refusal. `register/complete` spends the invite in the same transaction that creates the account, after the signature verifies: a failed signature leaves the invite usable, and concurrent completions on one invite allow exactly one.
+- `device_id` / `new_device_id` (optional, at most 64 characters) name the device that holds the new credential: the vault's or virtual token's random id. The server stores and reports it but cannot verify it: it is self-reported, not signed and not an attestation.
 - Registration only creates new accounts. Adding a credential to an existing account requires migration, which the existing credential must authorize.
 - Migration verifies two signatures: the old credential over the `migrate` message, and the new key over a `register` proof with the same transaction. It then revokes the old credential and inserts the new one in one transaction.
 - The server re-checks the stored policy's RP, allowed operations and expiry on login and migrate.

@@ -34,6 +34,7 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 | FR-14 | User presence / user verification is distinguished | **Open** |
 | FR-15 | First registration of a username requires a single-use, expiring invite issued by the operator | `tests/server/test_enrollment.py` |
 | FR-16 | Users can delete a credential from the vault and change the vault PIN | `cli delete`, `cli change-pin`; `tests/authenticator/` |
+| FR-17 | The relying party records which device each credential was created on | `device_id` on credentials; `tests/authenticator/test_device_identity.py` (self-reported, not attested) |
 
 ## 4. Security requirements
 
