@@ -10,4 +10,4 @@
 | Signing backend contract | [`phase2/decisions/0002-signing-backend-contract.md`](../../phase2/decisions/0002-signing-backend-contract.md) (superseded by ADR 0005) |
 | Virtual token boundary | [`docs/decisions/0005-structured-request-signing.md`](../../docs/decisions/0005-structured-request-signing.md) |
 
-**Known limits:** device identity, controlled unlocked sessions and a CLI credential-deletion command are not built (`docs/MILESTONE_ACCEPTANCE.md`, Phase 5).
+**Known limits:** device identity is not built; it needs a protocol change (`docs/MILESTONE_ACCEPTANCE.md`, Phase 5).

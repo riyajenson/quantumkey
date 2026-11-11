@@ -35,9 +35,9 @@ Gate: challenge generation and consumption pass expiry, replay, mismatch and con
 
 Gate: valid registration and login succeed repeatedly, and altered signatures, altered messages, expired or reused challenges and mismatched credentials consistently fail. Covered for all three variants by `tests/e2e/test_software_flow.py` and the server tests, and demonstrated live with the CLI.
 
-## Phase 5: Secure authenticator vault. **Mostly met**
+## Phase 5: Secure authenticator vault. **Met, except device identity**
 
-Gate: no plaintext PIN or private key on disk, wrong PINs fail safely, modified ciphertext is detected. Met (vault tests). Still open: device identity, controlled unlocked sessions, a credential deletion command in the CLI, vault schema migration.
+Gate: no plaintext PIN or private key on disk, wrong PINs fail safely, modified ciphertext is detected. Met (vault tests). Also done: multiple credentials, PIN-checked deletion that overwrites the row (`cli delete`), PIN change and KDF-parameter upgrade (`cli change-pin`), opt-in unlocked sessions with a fixed lifetime and `lock()`, and vault format v3 with in-place migration from v2 (`tests/authenticator/`). Still open: device identity, which needs a protocol field the server does not have.
 
 ## Phase 6: Hardening, observability, reproducibility. **Started**
 

@@ -9,7 +9,7 @@
 | E-01 | ML-DSA keygen/sign/verify feasibility on desktop | **Done** (3 x 100 iterations) | `phase-1/.../experiments/results.md` |
 | E-02 | Does the registration/login state machine meet the contract? | **Done** (automated) | `tests/server`, `tests/e2e` |
 | E-03 | Do independent ML-DSA implementations agree? | Open | — |
-| E-04 | Vault usability: unlock latency, overhead, corruption | **Partial**: latency and tamper detection measured; KDF calibration open | `docs/evaluation/`, vault tests |
+| E-04 | Vault usability: unlock latency, overhead, corruption | **Partial**: latency and tamper detection measured; parameters now per credential and changeable; calibration run open | `docs/evaluation/`, vault tests |
 | E-05 | Payload sizes and transport overhead | **Done** for JSON/HTTP | `docs/evaluation/bench-2026-11-06.json` |
 | E-06 | MCU feasibility (RAM, flash, latency) | Open (analysis only) | `hardware-constraints.md` |
 | E-07 | Can a token enforce allowed signing requests? | **Done** for the virtual token | `tests/e2e/test_migration.py` |
