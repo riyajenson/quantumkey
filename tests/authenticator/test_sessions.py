@@ -137,3 +137,17 @@ def test_cli_change_pin(tmp_path, clock, monkeypatch):
     assert run(monkeypatch, [*vault, "change-pin"], new_pin="5678") == 0
     assert Vault(tmp_path / "v.sqlite3").unlock("5678", "c1")
     assert run(monkeypatch, [*vault, "change-pin"], pin="1234", new_pin="9999") == 1  # old PIN gone
+
+
+def test_cli_change_pin_can_set_new_kdf_parameters(tmp_path, clock, monkeypatch):
+    import sqlite3
+
+    make_signer(tmp_path, clock)
+    vault = ["--vault", str(tmp_path / "v.sqlite3")]
+    args = [*vault, "change-pin", "--time-cost", "2", "--memory-kib", "16384", "--parallelism", "1"]
+    assert run(monkeypatch, args, new_pin="1234") == 0  # same PIN, stronger parameters
+    with sqlite3.connect(tmp_path / "v.sqlite3") as db:
+        assert db.execute("SELECT kdf_time_cost, kdf_memory_kib FROM credentials").fetchall() == [
+            (2, 16384)
+        ]
+    assert run(monkeypatch, [*vault, "change-pin", "--memory-kib", "1"], new_pin="1234") == 1

@@ -5,7 +5,7 @@
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 list
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 migrate alice <old-credential-id>
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 delete <credential-id>
-    python -m quantumkey.authenticator.cli --vault vault.sqlite3 change-pin
+    python -m quantumkey.authenticator.cli --vault vault.sqlite3 change-pin [--time-cost 3 --memory-kib 65536]
 
 The invite comes from the server operator (`python -m quantumkey.server.admin invite alice`).
 The PIN comes from the QK_PIN environment variable or an interactive prompt,
@@ -28,7 +28,7 @@ from quantumkey.authenticator.client import AuthClient, ServerRejected
 from quantumkey.authenticator.core import SigningRefused
 from quantumkey.authenticator.software import SoftwareSigner
 from quantumkey.authenticator.token import VirtualToken
-from quantumkey.authenticator.vault import VaultError
+from quantumkey.authenticator.vault import DEFAULT_KDF, KdfParams, VaultError
 
 
 def _pin() -> str:
@@ -64,7 +64,14 @@ def main(argv: list[str] | None = None) -> int:
     migrate.add_argument("credential_id")
     delete = commands.add_parser("delete", help="delete a credential from this vault")
     delete.add_argument("credential_id")
-    commands.add_parser("change-pin", help="re-encrypt every credential under a new PIN")
+    change_pin = commands.add_parser(
+        "change-pin",
+        help="re-encrypt every credential under a new PIN and Argon2id parameters "
+        "(see python -m quantumkey.authenticator.calibrate)",
+    )
+    change_pin.add_argument("--time-cost", type=int, default=DEFAULT_KDF.time_cost)
+    change_pin.add_argument("--memory-kib", type=int, default=DEFAULT_KDF.memory_kib)
+    change_pin.add_argument("--parallelism", type=int, default=DEFAULT_KDF.parallelism)
 
     args = parser.parse_args(argv)
     try:
@@ -84,7 +91,9 @@ def main(argv: list[str] | None = None) -> int:
             print("note: it is still active on the server, which has no revoke endpoint yet")
             return 0
         if args.command == "change-pin":
-            count = signer.vault.change_pin(pin, _new_pin())
+            kdf = KdfParams(args.time_cost, args.memory_kib, args.parallelism)
+            kdf.check()
+            count = signer.vault.change_pin(pin, _new_pin(), kdf=kdf)
             print(f"PIN changed for {count} credential(s)")
             return 0
         with httpx.Client(base_url=args.server, timeout=10) as http:
