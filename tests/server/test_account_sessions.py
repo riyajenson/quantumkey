@@ -100,14 +100,6 @@ def test_logout_ends_the_session(client):
 
 
 
-def test_sessions_are_independent(client):
-    alice, bob = register(client, "alice"), register(client, "bob")
-    token_alice, token_bob = login(client, "alice", alice), login(client, "bob", bob)
-    assert token_alice != token_bob
-    client.post("/auth/logout", json={}, headers=bearer(token_alice))
-    assert client.get("/auth/session", headers=bearer(token_bob)).json()["username"] == "bob"
-
-
 def test_migration_ends_the_old_credentials_sessions(client):
     old = register(client, "alice")
     token = login(client, "alice", old)
@@ -120,3 +112,20 @@ def test_migration_ends_the_old_credentials_sessions(client):
         "/auth/migrate/complete", json=migrate_body(started, new, old_sig, new_sig)
     ).status_code == 200
     assert client.get("/auth/session", headers=bearer(token)).status_code == 401
+
+
+def test_sessions_are_independent(client):
+    alice, bob = register(client, "alice"), register(client, "bob")
+    token_alice, token_bob = login(client, "alice", alice), login(client, "bob", bob)
+    assert token_alice != token_bob
+    client.post("/auth/logout", json={}, headers=bearer(token_alice))
+    assert client.get("/auth/session", headers=bearer(token_bob)).json()["username"] == "bob"
+
+
+def test_expired_sessions_are_purged(client, clock):
+    cred = register(client, "alice")
+    login(client, "alice", cred)
+    clock.now += SESSION_TTL + 1
+    assert client.app.state.rp.purge_expired()[2] == 1
+    with Session(client.app.state.rp.engine) as session:
+        assert session.scalars(select(AuthSession)).all() == []

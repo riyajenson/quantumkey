@@ -111,9 +111,10 @@ class RelyingParty:
             )
         return started
 
-    def purge_expired(self) -> tuple[int, int]:
-        """Delete expired challenges and expired or spent invites; return how many
-        of each. Such rows can never be used again, so this changes no behavior.
+    def purge_expired(self) -> tuple[int, int, int]:
+        """Delete expired challenges, expired or spent invites, and expired
+        sessions; return how many of each. Such rows can never be used again,
+        so this changes no behavior.
         Runs automatically from _issue at most once per PURGE_INTERVAL."""
         now = self.clock()
         self._last_purge = now
@@ -126,7 +127,10 @@ class RelyingParty:
                     or_(EnrollmentInvite.expires_at <= now, EnrollmentInvite.used_at.is_not(None))
                 )
             ).rowcount
-        return challenges, invites
+            sessions = session.execute(
+                delete(AuthSession).where(AuthSession.expires_at <= now)
+            ).rowcount
+        return challenges, invites, sessions
 
     def _consume(self, transaction_id: str, purpose: str) -> Challenge:
         """Atomically mark the challenge used. Unknown, expired, reused, or
