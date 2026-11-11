@@ -14,7 +14,7 @@
 | R-08 | Schema changes corrupt or fork deployed databases | M | M | Alembic migration plus a test that it matches the models | Mitigated |
 | R-09 | Argon2id unlock dominates login latency (~127 ms of ~138 ms on the CI runner; ~256 ms of ~325 ms on the Windows dev machine) | H | L | Opt-in unlocked sessions cut login to ~7 ms (E-04); per-credential parameters can be recalibrated with `calibrate` and applied with `change-pin` | Mitigated |
 | R-10 | Server has no rate limiting, so challenge flooding fills the table | M | M | 60 POSTs/min per IP, 64 KB body cap, and automatic purging of expired rows (`tests/server/test_limits.py`). No per-user limit, because it would let an attacker lock a victim out. Residual: counts are per server process and reset on restart; the client IP is the socket peer (X-Forwarded-For is not trusted), so many IPs or workers raise the effective limit | Mitigated |
-| R-11 | Hostile inputs crash the parser or token | L | M | Strict parsers, size limits, type-confusion tests; fuzzing still open | Partly mitigated |
+| R-11 | Hostile inputs crash the parser or token | L | M | Strict parsers, size limits, type-confusion tests, and seeded fuzzing (E-09), which found and fixed a deep-nesting crash in the policy parser and token | Mitigated |
 | R-12 | Team capacity: one person does all workstreams | H | M | Keep scope to the prototype; phases gated by tests and docs, not headcount | Accepted |
 | R-13 | PostgreSQL and TLS behaviour in a real deployment untested | M | M | PostgreSQL covered in tests; TLS excluded from scope and documented | Partly mitigated |
 | R-14 | Lost PIN or vault means lost credential with no recovery | M | M | Re-enroll through the relying party; recovery flow not designed | Open |

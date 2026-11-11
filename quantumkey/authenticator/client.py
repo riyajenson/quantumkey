@@ -31,7 +31,12 @@ class AuthClient:
 
     def _post(self, path: str, body: dict) -> dict:
         response = self.http.post(path, json=body)
-        data = response.json()
+        try:
+            data = response.json()
+        except (ValueError, RecursionError):  # not JSON, or deeply nested
+            data = None
+        if not isinstance(data, dict):
+            raise ServerRejected(response.status_code, "invalid_response")
         if response.status_code >= 400:
             raise ServerRejected(response.status_code, data.get("error", "unknown"))
         return data

@@ -22,7 +22,7 @@ Remote attacker without an account; network attacker; attacker with a copy of th
 | T-06 | Theft of a vault copy | Argon2id + AES-256-GCM per credential | vault tests | Offline PIN guessing; short PINs are weak |
 | T-07 | Host compromise while unlocked | Token keeps keys out of the host process | token tests | Software signer offers no protection; token is only a process |
 | T-08 | Signing-oracle abuse | **Structured-request signing**: the signer builds the message itself; the token rejects extra fields and has no raw-sign or export command | `test_token_has_no_export_or_raw_sign_command`, `test_token_enforces_policy_for_a_malicious_host` | A malicious host can still request a valid login for the policy's own RP |
-| T-09 | Token parser exploit | Bounded frames (64 KiB), JSON object only, unknown fields rejected, type checks | `test_token_survives_garbage_frames` | No fuzzing yet |
+| T-09 | Token parser exploit | Bounded frames (64 KiB), JSON object only, deep nesting rejected, unknown fields rejected, type checks | `test_token_survives_garbage_frames`, `tests/protocol/test_fuzz.py` | Random and mutation fuzzing only, not coverage-guided |
 | T-10 | Malicious firmware | Out of scope (no hardware) | — | Open |
 | T-11 | Side-channel leakage | liboqs implementation; Windows build warns that constant time is not guaranteed | `phase2/DEVELOPMENT.md` | Open |
 | T-12 | Policy swap | Policy hash bound into signatures and vault AAD | `test_registration_rejects_swapped_policy`, `test_tampered_vault_policy_is_detected` | — |
