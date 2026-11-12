@@ -102,3 +102,39 @@ def test_devices_lists_the_accounts_credentials(app, tmp_path, monkeypatch, caps
         from sqlalchemy import text
 
         assert connection.execute(text("SELECT count(*) FROM sessions")).scalar() == 0
+
+
+def test_recovery_credential_replaces_every_lost_device(app, tmp_path, monkeypatch, capsys):
+    laptop, backup, phone = (str(tmp_path / f"{n}.sqlite3") for n in ("laptop", "backup", "phone"))
+    token = app.state.rp.issue_invite("alice")
+    _, out, _ = run(monkeypatch, capsys, ["--vault", laptop, "register", "alice", "--invite", token])
+    laptop_id = out.split()[-1]
+    code, out, err = run(
+        monkeypatch, capsys,
+        ["--vault", laptop, "enroll", "alice", laptop_id, "--new-vault", backup, "--recovery"],
+        new_pin="backup-pin",
+    )
+    assert code == 0, err
+    backup_id = out.split()[1]
+    from quantumkey.authenticator.vault import Vault
+
+    assert set(Vault(backup).get_public(backup_id).policy.allowed_ops) == {"register", "enroll", "revoke"}
+
+    # The recovery credential cannot be used to sign in.
+    code, _, err = run(monkeypatch, capsys, ["--vault", backup, "login", "alice"], pin="backup-pin")
+    assert code == 1 and "not allowed" in err
+
+    # The laptop is lost: the backup enrolls a new phone and revokes the laptop.
+    code, out, err = run(
+        monkeypatch, capsys,
+        ["--vault", backup, "enroll", "alice", backup_id, "--new-vault", phone],
+        pin="backup-pin", new_pin="phone-pin",
+    )
+    assert code == 0, err
+    code, _, err = run(
+        monkeypatch, capsys,
+        ["--vault", backup, "revoke", "alice", laptop_id, "--with", backup_id], pin="backup-pin",
+    )
+    assert code == 0, err
+    code, out, err = run(monkeypatch, capsys, ["--vault", phone, "login", "alice"], pin="phone-pin")
+    assert (code, out.strip()) == (0, "login ok"), err

@@ -14,6 +14,12 @@ from dataclasses import dataclass
 from quantumkey.protocol.message import Operation
 
 
+# A recovery credential can be enrolled (its proof of possession is a register
+# signature), then enroll and revoke other credentials, but never log in or
+# migrate. Kept offline, it replaces every lost device (ADR 0009).
+RECOVERY_OPS = ("register", "enroll", "revoke")
+
+
 class PolicyError(ValueError):
     """Raised for malformed policies or policy violations."""
 
