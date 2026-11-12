@@ -7,6 +7,7 @@
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 delete <credential-id>
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 enroll alice <credential-id> --new-vault phone.sqlite3
     python -m quantumkey.authenticator.cli --vault phone.sqlite3 revoke alice <lost-id> --with <credential-id>
+    python -m quantumkey.authenticator.cli --vault phone.sqlite3 devices alice
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 change-pin [--time-cost 3 --memory-kib 65536]
 
 The invite comes from the server operator (`python -m quantumkey.server.admin invite alice`).
@@ -49,6 +50,16 @@ def _new_pin() -> str:
     return first
 
 
+def _own_credential(args: argparse.Namespace, signer: SoftwareSigner) -> str | None:
+    """The credential to sign in with: the one named, else this vault's only
+    credential (on an enrolled device the account's oldest credential may live
+    elsewhere), else none and the server chooses."""
+    if args.credential_id:
+        return args.credential_id
+    held = signer.vault.list_credentials()
+    return held[0].credential_id if len(held) == 1 else None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="quantumkey")
     parser.add_argument("--server", default="http://127.0.0.1:8000")
@@ -81,6 +92,9 @@ def main(argv: list[str] | None = None) -> int:
     revoke.add_argument("target_id", help="the credential to revoke")
     revoke.add_argument("--with", dest="authorizer_id", required=True,
                         help="the authorizing credential in this vault")
+    devices = commands.add_parser("devices", help="list the account's credentials")
+    devices.add_argument("username")
+    devices.add_argument("--credential-id", help="credential in this vault to sign in with")
     delete = commands.add_parser("delete", help="delete a credential from this vault")
     delete.add_argument("credential_id")
     change_pin = commands.add_parser(
@@ -120,14 +134,21 @@ def main(argv: list[str] | None = None) -> int:
             if args.command == "register":
                 print("registered", client.register(args.username, signer, args.algorithm, invite=args.invite))
             elif args.command == "login":
-                credential_id = args.credential_id
-                if credential_id is None:
-                    # On an enrolled device the account's oldest credential may
-                    # live elsewhere; a vault with one credential uses its own.
-                    held = signer.vault.list_credentials()
-                    credential_id = held[0].credential_id if len(held) == 1 else None
-                client.login(args.username, signer, credential_id)
+                client.login(args.username, signer, _own_credential(args, signer))
                 print("login ok")
+            elif args.command == "devices":
+                token = client.login(args.username, signer, _own_credential(args, signer))
+                try:
+                    held = {c.credential_id for c in signer.vault.list_credentials()}
+                    print("credential_id\tstatus\talgorithm\tdevice_id\tallowed_ops")
+                    for c in client.credentials(token):
+                        mark = "\t(this vault)" if c["credential_id"] in held else ""
+                        print(
+                            f"{c['credential_id']}\t{c['status']}\t{c['algorithm']}\t"
+                            f"{c['device_id'] or '-'}\t{','.join(c['allowed_ops'])}{mark}"
+                        )
+                finally:
+                    client.logout(token)
             elif args.command == "enroll":
                 new_signer = SoftwareSigner(args.new_vault, _new_pin())
                 new_id = client.enroll(

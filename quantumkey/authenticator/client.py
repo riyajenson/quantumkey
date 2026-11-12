@@ -29,8 +29,18 @@ class AuthClient:
         self.http = http
         self.rp_id = rp_id
 
-    def _post(self, path: str, body: dict) -> dict:
-        response = self.http.post(path, json=body)
+    def _post(self, path: str, body: dict, token: str | None = None) -> dict:
+        if token is None:
+            return self._parse(self.http.post(path, json=body))
+        return self._parse(
+            self.http.post(path, json=body, headers={"Authorization": f"Bearer {token}"})
+        )
+
+    def _get(self, path: str, token: str) -> dict:
+        return self._parse(self.http.get(path, headers={"Authorization": f"Bearer {token}"}))
+
+    @staticmethod
+    def _parse(response: Any) -> dict:
         try:
             data = response.json()
         except (ValueError, RecursionError):  # not JSON, or deeply nested
@@ -96,6 +106,13 @@ class AuthClient:
             },
         )
         return result["session_token"]
+
+    def credentials(self, token: str) -> list[dict]:
+        """The session's account credentials (read-only)."""
+        return self._get("/auth/credentials", token)["credentials"]
+
+    def logout(self, token: str) -> None:
+        self._post("/auth/logout", {}, token)
 
     def migrate(
         self,
