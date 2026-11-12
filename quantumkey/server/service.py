@@ -318,12 +318,31 @@ class RelyingParty:
             )
             if credential_id is not None:
                 query = query.where(Credential.credential_id == credential_id)
-            credential = session.scalars(query.order_by(Credential.created_at)).first()
+                credential = session.scalars(query).first()
+            else:
+                # Without a named credential, use the oldest one whose policy may
+                # log in now; a recovery credential is never chosen by default.
+                now = self.clock()
+                credential = next(
+                    (
+                        c
+                        for c in session.scalars(query.order_by(Credential.created_at))
+                        if self._may_log_in(c, now)
+                    ),
+                    None,
+                )
             if credential is None:
                 raise ProtocolError("unknown_credential", 404)
             return self._issue(
                 "login", username, credential.algorithm, credential.credential_id
             )
+
+    @staticmethod
+    def _may_log_in(credential: Credential, now: float) -> bool:
+        policy = Policy.from_bytes(credential.policy)
+        return "login" in policy.allowed_ops and (
+            policy.not_after is None or now <= policy.not_after
+        )
 
     def login_complete(self, transaction_id: str, credential_id: str, signature: bytes) -> str:
         challenge = self._consume(transaction_id, "login")

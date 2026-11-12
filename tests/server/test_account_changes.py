@@ -246,3 +246,28 @@ def test_concurrent_mutual_revocation_leaves_exactly_one_active_credential(clien
             thread.join()
         assert statuses.count(200) == 1, statuses
         assert [status(client, c) for c in (first, second)].count("active") == 1
+
+
+# -- recovery credentials ------------------------------------------------------------
+
+RECOVERY = ("register", "enroll", "revoke")
+
+
+def test_default_login_skips_credentials_that_may_not_log_in(client):
+    recovery = register(client, "alice", new_cred(policy=Policy(rp_id=RP_ID, allowed_ops=RECOVERY)))
+    daily, response = enroll(client, "alice", recovery)
+    assert response.status_code == 200
+    started = client.post("/auth/login/start", json={"username": "alice"}).json()
+    assert started["credential_id"] == daily.credential_id
+    assert can_login(client, "alice", daily)
+
+
+def test_recovery_credential_cannot_log_in_even_when_named(client):
+    recovery = register(client, "alice", new_cred(policy=Policy(rp_id=RP_ID, allowed_ops=RECOVERY)))
+    assert not can_login(client, "alice", recovery)
+
+
+def test_account_with_only_a_recovery_credential_has_no_default_login(client):
+    register(client, "alice", new_cred(policy=Policy(rp_id=RP_ID, allowed_ops=RECOVERY)))
+    response = client.post("/auth/login/start", json={"username": "alice"})
+    assert (response.status_code, response.json()) == (404, {"error": "unknown_credential"})
