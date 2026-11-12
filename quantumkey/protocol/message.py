@@ -19,6 +19,8 @@ class Operation(IntEnum):
     REGISTER = 1
     LOGIN = 2
     MIGRATE = 3
+    ENROLL = 4  # an existing credential authorizes an additional one (ADR 0009)
+    REVOKE = 5  # an existing credential revokes one of the account's credentials
 
 
 class MessageError(ValueError):
