@@ -14,14 +14,14 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
-from sqlalchemy import create_engine, delete, or_, select, update
+from sqlalchemy import create_engine, delete, func, or_, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from quantumkey import crypto
 from quantumkey.protocol.message import Operation, SignedMessage
-from quantumkey.protocol.migration import migration_binding
+from quantumkey.protocol.migration import migration_binding, revocation_binding
 from quantumkey.protocol.policy import Policy, PolicyError
 from quantumkey.server.models import (
     AuthSession,
@@ -531,6 +531,67 @@ class RelyingParty:
         except IntegrityError as exc:
             raise ProtocolError("already_registered", 409) from exc
         return new_credential_id
+
+    # -- revocation (ADR 0009) --------------------------------------------------------
+
+    def revoke_start(self, username: str, authorizer_id: str) -> Started:
+        return self._start_account_change(
+            "revoke", username, authorizer_id, crypto.DEFAULT_ALGORITHM
+        )
+
+    def revoke_complete(self, transaction_id: str, target_id: str, signature: bytes) -> str:
+        """Revoke `target_id`, authorized by the credential the challenge was
+        issued to. The target must be an active credential of the same account
+        and must not be its last one."""
+        self._check_ids(target_id)
+        challenge = self._consume(transaction_id, "revoke")
+        with Session(self.engine) as session:
+            authorizer = self._active_credential(session, challenge.credential_id)
+            self._enforce_server_policy(authorizer, Operation.REVOKE)
+            message = self._message(
+                Operation.REVOKE,
+                challenge,
+                authorizer.credential_id,
+                authorizer.algorithm,
+                authorizer.policy_hash,
+                extra=revocation_binding(target_id),
+            )
+            valid = crypto.verify(authorizer.algorithm, authorizer.public_key, message, signature)
+            authorizer_id, username = authorizer.credential_id, authorizer.username
+        if not valid:
+            raise ProtocolError("invalid_signature", 401)
+        with Session(self.engine) as session, session.begin():
+            # Lock the account first, so concurrent revocations are serialized
+            # and cannot together remove every active credential.
+            session.execute(
+                update(User).where(User.username == username).values(username=User.username)
+            )
+
+            def active(credential_id: str) -> bool:
+                credential = session.get(Credential, credential_id)
+                return (
+                    credential is not None
+                    and credential.username == username
+                    and credential.status == "active"
+                )
+
+            # The authorizer may have been revoked while this request waited.
+            if not active(authorizer_id) or not active(target_id):
+                raise ProtocolError("unknown_credential", 404)
+            remaining = session.scalar(
+                select(func.count())
+                .select_from(Credential)
+                .where(Credential.username == username, Credential.status == "active")
+            )
+            if remaining <= 1:
+                raise ProtocolError("last_credential", 409)
+            session.execute(
+                update(Credential)
+                .where(Credential.credential_id == target_id)
+                .values(status="revoked")
+            )
+            session.execute(delete(AuthSession).where(AuthSession.credential_id == target_id))
+        return target_id
 
     # -- inspection ----------------------------------------------------------------
 

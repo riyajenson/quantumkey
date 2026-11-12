@@ -126,3 +126,123 @@ def test_enroll_cannot_reuse_a_credential_id(client):
     object.__setattr__(duplicate, "credential_id", first.credential_id)
     _, response = enroll(client, "alice", first, new=duplicate)
     assert response.status_code == 409
+
+
+# -- revoke ----------------------------------------------------------------------
+
+
+def revoke(client, username, authorizer, target_id, signed_target=None):
+    from quantumkey import crypto
+    from quantumkey.protocol.migration import revocation_binding
+    from tests.helpers import message
+
+    started = client.post(
+        "/auth/revoke/start", json={"username": username, "credential_id": authorizer.credential_id}
+    )
+    if started.status_code != 200:
+        return started
+    started = started.json()
+    binding = revocation_binding(signed_target if signed_target is not None else target_id)
+    signature = crypto.sign(
+        authorizer.algorithm, authorizer.private_key,
+        message(Operation.REVOKE, started, authorizer, extra=binding),
+    )
+    return client.post(
+        "/auth/revoke/complete",
+        json={
+            "transaction_id": started["transaction_id"],
+            "target_credential_id": target_id,
+            "signature": crypto.b64e(signature),
+        },
+    )
+
+
+def two_device_account(client, username="alice"):
+    first = register(client, username)
+    second, response = enroll(client, username, first)
+    assert response.status_code == 200
+    return first, second
+
+
+def test_a_device_revokes_another_lost_device(client):
+    first, lost = two_device_account(client)
+    response = revoke(client, "alice", first, lost.credential_id)
+    assert (response.status_code, response.json()) == (
+        200,
+        {"credential_id": lost.credential_id, "status": "revoked"},
+    )
+    assert status(client, lost) == "revoked" and not can_login(client, "alice", lost)
+    assert can_login(client, "alice", first)
+
+
+def test_a_device_may_revoke_itself_if_another_remains(client):
+    first, second = two_device_account(client)
+    assert revoke(client, "alice", first, first.credential_id).status_code == 200
+    assert status(client, first) == "revoked" and status(client, second) == "active"
+
+
+def test_the_last_active_credential_cannot_be_revoked(client):
+    only = register(client, "alice")
+    response = revoke(client, "alice", only, only.credential_id)
+    assert (response.status_code, response.json()) == (409, {"error": "last_credential"})
+    assert status(client, only) == "active"
+
+
+def test_another_accounts_credential_cannot_be_revoked(client):
+    first, _ = two_device_account(client, "alice")
+    bob_first, bob_second = two_device_account(client, "bob")
+    response = revoke(client, "alice", first, bob_second.credential_id)
+    assert (response.status_code, response.json()) == (404, {"error": "unknown_credential"})
+    assert status(client, bob_second) == "active"
+
+
+def test_signature_for_another_target_is_rejected(client):
+    first, second = two_device_account(client)
+    third, _ = enroll(client, "alice", first)
+    response = revoke(client, "alice", first, third.credential_id, signed_target=second.credential_id)
+    assert (response.status_code, response.json()) == (401, {"error": "invalid_signature"})
+    assert status(client, second) == status(client, third) == "active"
+
+
+def test_authorizer_policy_without_revoke_is_refused(client):
+    limited = new_cred(policy=Policy(rp_id=RP_ID, allowed_ops=("register", "login", "enroll")))
+    first = register(client, "alice", limited)
+    second, _ = enroll(client, "alice", first)
+    response = revoke(client, "alice", first, second.credential_id)
+    assert (response.status_code, response.json()) == (403, {"error": "policy_violation"})
+
+
+def test_revoking_ends_the_targets_sessions(client):
+    first, second = two_device_account(client)
+    started = client.post(
+        "/auth/login/start", json={"username": "alice", "credential_id": second.credential_id}
+    ).json()
+    token = client.post(
+        "/auth/login/complete", json=login_body(started, second, login_signature(started, second))
+    ).json()["session_token"]
+    assert revoke(client, "alice", first, second.credential_id).status_code == 200
+    assert client.get("/auth/session", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+
+
+def test_concurrent_mutual_revocation_leaves_exactly_one_active_credential(client):
+    import threading
+
+    for attempt in range(5):
+        username = f"user{attempt}"
+        first, second = two_device_account(client, username)
+        statuses, barrier = [], threading.Barrier(2)
+
+        def attempt_revoke(authorizer, target):
+            barrier.wait()
+            statuses.append(revoke(client, username, authorizer, target.credential_id).status_code)
+
+        threads = [
+            threading.Thread(target=attempt_revoke, args=(first, second)),
+            threading.Thread(target=attempt_revoke, args=(second, first)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        assert statuses.count(200) == 1, statuses
+        assert [status(client, c) for c in (first, second)].count("active") == 1
