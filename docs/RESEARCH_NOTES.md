@@ -24,6 +24,8 @@ The old credential signs a binding over the new credential's id, algorithm, publ
 
 Adding and revoking credentials are signed operations of an existing credential (`enroll`, `revoke`), built by the signer from a structured request and checked against that credential's policy on the signer and the server (ADR 0009). No bearer session can change the account. This closes the gap a session-authorized "add device" would open: with sessions, add-then-revoke would migrate a credential whose policy forbids `migrate`. Tests cover the lost-device flow (a virtual token revokes the lost software credential), a token refusing `revoke` when its policy omits it, the last-credential rule, and 25 concurrent mutual revocations on PostgreSQL leaving exactly one active credential each time.
 
+**Recovery credentials.** The same mechanism gives policy-scoped recovery: a credential enrolled with the policy `register`, `enroll`, `revoke` (`cli enroll --recovery`) can never log in or migrate, but kept offline it can enroll a new device and revoke every lost one. The server never picks it as a default login (`test_recovery_credential_replaces_every_lost_device`).
+
 **Boundary of the claim.** Enrolled devices are peers. Any device whose policy allows `revoke` can remove the others, so the account is as strong as its weakest such device.
 
 ### Evaluation (first numbers)
@@ -87,7 +89,7 @@ ML-DSA in FIDO2/WebAuthn is therefore **not** a novelty claim. The three contrib
 
 1. **Formal model.** Model the canonical message, challenge lifecycle and migration in Tamarin or ProVerif and prove no cross-operation or cross-relying-party replay. This is the strongest way to turn the candidate contributions into a defensible result.
 2. **Real token.** Port the framed protocol to a Raspberry Pi Pico or STM32 using a vetted embedded ML-DSA implementation (PQClean or pqm4); measure peak RAM and signing latency (experiment E-06).
-3. **Recovery credential.** A cold backup credential whose policy allows only `migrate`, so a lost device is recovered by migration rather than re-enrollment.
+3. ~~**Recovery credential.**~~ Built (Contribution 4): an enrolled credential limited to `register`, `enroll` and `revoke`.
 4. **Server-required minimum policy.** The relying party refuses credentials whose policy is weaker than its own (for example a rate cap above N), making policy a verifiable enrollment attribute.
 5. **Split authorization.** Require both a software and a token signature for sensitive operations (2-of-2).
 6. **Hybrid signatures.** Add an Ed25519 signature next to ML-DSA in the canonical message and measure the cost.
