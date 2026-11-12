@@ -271,3 +271,48 @@ def test_account_with_only_a_recovery_credential_has_no_default_login(client):
     register(client, "alice", new_cred(policy=Policy(rp_id=RP_ID, allowed_ops=RECOVERY)))
     response = client.post("/auth/login/start", json={"username": "alice"})
     assert (response.status_code, response.json()) == (404, {"error": "unknown_credential"})
+
+
+# -- listing the account's credentials -------------------------------------------------
+
+
+def session_for(client, username, cred):
+    started = client.post(
+        "/auth/login/start", json={"username": username, "credential_id": cred.credential_id}
+    ).json()
+    response = client.post(
+        "/auth/login/complete", json=login_body(started, cred, login_signature(started, cred))
+    )
+    return {"Authorization": f"Bearer {response.json()['session_token']}"}
+
+
+def test_a_session_lists_the_accounts_credentials(client):
+    first, second = two_device_account(client)
+    third, _ = enroll(client, "alice", first)
+    assert revoke(client, "alice", first, third.credential_id).status_code == 200
+    response = client.get("/auth/credentials", headers=session_for(client, "alice", second))
+    assert response.status_code == 200
+    listed = response.json()["credentials"]
+    # The fixture's clock is fixed, so creation times tie; compare as a set.
+    assert {(c["credential_id"], c["status"]) for c in listed} == {
+        (first.credential_id, "active"),
+        (second.credential_id, "active"),
+        (third.credential_id, "revoked"),
+    }
+    assert set(listed[0]) == {
+        "credential_id", "status", "algorithm", "device_id", "allowed_ops", "created_at", "replaced_by"
+    }
+    assert set(listed[0]["allowed_ops"]) == {"register", "login", "migrate", "enroll", "revoke"}
+
+
+def test_listing_shows_only_the_sessions_account(client):
+    alice_first, _ = two_device_account(client, "alice")
+    register(client, "bob")
+    listed = client.get("/auth/credentials", headers=session_for(client, "alice", alice_first)).json()
+    assert len(listed["credentials"]) == 2
+
+
+def test_listing_needs_a_session(client):
+    two_device_account(client)
+    response = client.get("/auth/credentials")
+    assert (response.status_code, response.json()) == (401, {"error": "invalid_session"})

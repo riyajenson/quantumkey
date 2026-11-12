@@ -391,6 +391,29 @@ class RelyingParty:
                 raise ProtocolError("invalid_session", 401)
             return row.username, row.credential_id, row.expires_at
 
+    def account_credentials(self, token: str) -> list[dict]:
+        """Every credential of the session's account, oldest first. Read-only: a
+        session can see the account but not change it (ADR 0009)."""
+        username, _, _ = self.session_info(token)
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(Credential)
+                .where(Credential.username == username)
+                .order_by(Credential.created_at, Credential.credential_id)
+            ).all()
+            return [
+                {
+                    "credential_id": c.credential_id,
+                    "status": c.status,
+                    "algorithm": c.algorithm,
+                    "device_id": c.device_id,
+                    "allowed_ops": sorted(Policy.from_bytes(c.policy).allowed_ops),
+                    "created_at": c.created_at,
+                    "replaced_by": c.replaced_by,
+                }
+                for c in rows
+            ]
+
     def logout(self, token: str) -> None:
         self.session_info(token)
         with Session(self.engine) as session, session.begin():
