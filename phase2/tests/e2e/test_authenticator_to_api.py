@@ -12,6 +12,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
 from phase2.signing_backend import SoftwareMLDSABackend
@@ -43,6 +44,13 @@ def api(tmp_path: Path):
                 "whose name starts with qk_test_"
             )
         database_url = explicit_test_url
+        # Start every run from an empty database, as tests/helpers.database_url
+        # does: the parametrized runs register the same credential id.
+        engine = create_engine(database_url)
+        with engine.begin() as connection:
+            connection.execute(text("DROP SCHEMA public CASCADE"))
+            connection.execute(text("CREATE SCHEMA public"))
+        engine.dispose()
     else:
         database_url = "sqlite:///" + (tmp_path / "validation.sqlite3").as_posix()
     env = os.environ.copy()
