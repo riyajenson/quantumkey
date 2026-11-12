@@ -389,18 +389,29 @@ class RelyingParty:
         except PolicyError as exc:
             raise ProtocolError("policy_violation", 403) from exc
 
-    # -- migration -----------------------------------------------------------------
+    # -- migration and enrollment (ADR 0006, ADR 0009) ------------------------------
+
+    def _start_account_change(
+        self, purpose: str, username: str, credential_id: str, algorithm: str
+    ) -> Started:
+        """Issue a challenge for an account change that `credential_id` will authorize."""
+        if algorithm not in crypto.ALGORITHMS:
+            raise ProtocolError("unsupported_algorithm", 422)
+        with Session(self.engine) as session:
+            credential = self._active_credential(session, credential_id)
+            if credential.username != username:
+                raise ProtocolError("unknown_credential", 404)
+        return self._issue(purpose, username, algorithm, credential_id)
 
     def migrate_start(
         self, username: str, old_credential_id: str, new_algorithm: str = crypto.DEFAULT_ALGORITHM
     ) -> Started:
-        if new_algorithm not in crypto.ALGORITHMS:
-            raise ProtocolError("unsupported_algorithm", 422)
-        with Session(self.engine) as session:
-            credential = self._active_credential(session, old_credential_id)
-            if credential.username != username:
-                raise ProtocolError("unknown_credential", 404)
-        return self._issue("migrate", username, new_algorithm, old_credential_id)
+        return self._start_account_change("migrate", username, old_credential_id, new_algorithm)
+
+    def enroll_start(
+        self, username: str, authorizer_id: str, new_algorithm: str = crypto.DEFAULT_ALGORITHM
+    ) -> Started:
+        return self._start_account_change("enroll", username, authorizer_id, new_algorithm)
 
     def migrate_complete(
         self,
@@ -413,27 +424,66 @@ class RelyingParty:
         new_device_id: str | None = None,
     ) -> str:
         """Activate a new credential authorized by the old one; revoke the old."""
+        return self._add_authorized_credential(
+            Operation.MIGRATE, transaction_id, new_credential_id, new_public_key,
+            new_policy_bytes, old_signature, new_signature, new_device_id,
+        )
+
+    def enroll_complete(
+        self,
+        transaction_id: str,
+        new_credential_id: str,
+        new_public_key: bytes,
+        new_policy_bytes: bytes,
+        authorizer_signature: bytes,
+        new_signature: bytes,
+        new_device_id: str | None = None,
+    ) -> str:
+        """Add a credential to the account, authorized by an existing one, which
+        stays active."""
+        return self._add_authorized_credential(
+            Operation.ENROLL, transaction_id, new_credential_id, new_public_key,
+            new_policy_bytes, authorizer_signature, new_signature, new_device_id,
+        )
+
+    def _add_authorized_credential(
+        self,
+        operation: Operation,
+        transaction_id: str,
+        new_credential_id: str,
+        new_public_key: bytes,
+        new_policy_bytes: bytes,
+        authorizer_signature: bytes,
+        new_signature: bytes,
+        new_device_id: str | None,
+    ) -> str:
+        """Verify the authorizer's signature over the new credential's binding and
+        the new key's proof of possession, then add the new credential. Migration
+        also revokes the authorizer, in the same transaction."""
         self._check_ids(new_credential_id)
         if new_device_id is not None:
             self._check_ids(new_device_id)
-        challenge = self._consume(transaction_id, "migrate")
+        challenge = self._consume(transaction_id, operation.name.lower())
         self._check_key(challenge.algorithm, new_public_key)
         new_policy = self._parse_policy(new_policy_bytes)
         with Session(self.engine) as session:
-            old = self._active_credential(session, challenge.credential_id)
-            self._enforce_server_policy(old, Operation.MIGRATE)
-            old_message = self._message(
-                Operation.MIGRATE,
+            authorizer = self._active_credential(session, challenge.credential_id)
+            self._enforce_server_policy(authorizer, operation)
+            authorizer_message = self._message(
+                operation,
                 challenge,
-                old.credential_id,
-                old.algorithm,
-                old.policy_hash,
+                authorizer.credential_id,
+                authorizer.algorithm,
+                authorizer.policy_hash,
                 extra=migration_binding(
                     new_credential_id, challenge.algorithm, new_public_key, new_policy.digest()
                 ),
             )
-            old_ok = crypto.verify(old.algorithm, old.public_key, old_message, old_signature)
-            old_id, username = old.credential_id, old.username
+            authorizer_ok = crypto.verify(
+                authorizer.algorithm, authorizer.public_key, authorizer_message,
+                authorizer_signature,
+            )
+            authorizer_id, username = authorizer.credential_id, authorizer.username
         # The new key proves possession by signing a registration message that
         # carries the same transaction and challenge.
         proof = self._message(
@@ -445,20 +495,26 @@ class RelyingParty:
             extra=hashlib.sha256(new_public_key).digest(),
         )
         new_ok = crypto.verify(challenge.algorithm, new_public_key, proof, new_signature)
-        if not (old_ok and new_ok):
+        if not (authorizer_ok and new_ok):
             raise ProtocolError("invalid_signature", 401)
         now = self.clock()
         try:
             with Session(self.engine) as session, session.begin():
-                result = session.execute(
-                    update(Credential)
-                    .where(Credential.credential_id == old_id, Credential.status == "active")
-                    .values(status="revoked", replaced_by=new_credential_id)
-                )
-                if result.rowcount != 1:
-                    raise ProtocolError("unknown_credential", 404)
-                # A revoked credential's sessions end with it.
-                session.execute(delete(AuthSession).where(AuthSession.credential_id == old_id))
+                if operation is Operation.MIGRATE:
+                    result = session.execute(
+                        update(Credential)
+                        .where(
+                            Credential.credential_id == authorizer_id,
+                            Credential.status == "active",
+                        )
+                        .values(status="revoked", replaced_by=new_credential_id)
+                    )
+                    if result.rowcount != 1:
+                        raise ProtocolError("unknown_credential", 404)
+                    # A revoked credential's sessions end with it.
+                    session.execute(
+                        delete(AuthSession).where(AuthSession.credential_id == authorizer_id)
+                    )
                 session.add(
                     Credential(
                         credential_id=new_credential_id,

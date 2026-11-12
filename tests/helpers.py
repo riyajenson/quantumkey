@@ -139,12 +139,16 @@ def login_body(started: dict, cred: Cred, signature: bytes) -> dict:
     }
 
 
-def migration_signatures(started: dict, old: Cred, new: Cred) -> tuple[bytes, bytes]:
+def migration_signatures(
+    started: dict, old: Cred, new: Cred, operation: Operation = Operation.MIGRATE
+) -> tuple[bytes, bytes]:
+    """The authorizer's signature over the new-credential binding (migrate or
+    enroll) and the new key's proof of possession."""
     binding = migration_binding(
         new.credential_id, new.algorithm, new.public_key, new.policy.digest()
     )
     old_sig = crypto.sign(
-        old.algorithm, old.private_key, message(Operation.MIGRATE, started, old, extra=binding)
+        old.algorithm, old.private_key, message(operation, started, old, extra=binding)
     )
     new_sig = crypto.sign(
         new.algorithm,
