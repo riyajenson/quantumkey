@@ -16,7 +16,7 @@ from typing import Callable, Protocol
 
 from quantumkey import crypto
 from quantumkey.protocol.message import Operation, SignedMessage
-from quantumkey.protocol.migration import migration_binding
+from quantumkey.protocol.migration import migration_binding, revocation_binding
 from quantumkey.protocol.policy import Policy, PolicyError
 
 CHALLENGE_BYTES = 32
@@ -40,7 +40,8 @@ class SignRequest:
     rp_id: str
     transaction_id: str
     challenge: bytes
-    target: MigrationTarget | None = None  # required for, and only for, MIGRATE
+    target: MigrationTarget | None = None  # required for, and only for, MIGRATE and ENROLL
+    revoke_target: str | None = None  # required for, and only for, REVOKE
 
 
 @dataclass(frozen=True)
@@ -136,14 +137,23 @@ class SigningCore:
             raise SigningRefused("challenge must be 32 bytes")
         if not request.transaction_id or not request.rp_id:
             raise SigningRefused("transaction and relying party are required")
-        if (request.operation is Operation.MIGRATE) != (request.target is not None):
-            raise SigningRefused("migration target is required for, and only for, migrate")
+        adds_credential = request.operation in (Operation.MIGRATE, Operation.ENROLL)
+        if adds_credential != (request.target is not None):
+            raise SigningRefused(
+                "a new-credential target is required for, and only for, migrate and enroll"
+            )
+        if (request.operation is Operation.REVOKE) != (request.revoke_target is not None):
+            raise SigningRefused("a revoke target is required for, and only for, revoke")
+        if request.revoke_target is not None and not request.revoke_target:
+            raise SigningRefused("revoke target must not be empty")
 
     @staticmethod
     def _extra(public: PublicCredential, request: SignRequest) -> bytes:
         if request.operation is Operation.REGISTER:
             return hashlib.sha256(public.public_key).digest()
-        if request.operation is Operation.MIGRATE:
+        if request.operation is Operation.REVOKE:
+            return revocation_binding(request.revoke_target)
+        if request.operation in (Operation.MIGRATE, Operation.ENROLL):
             target = request.target
             return migration_binding(
                 target.credential_id, target.algorithm, target.public_key, target.policy_hash

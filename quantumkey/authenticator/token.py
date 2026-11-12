@@ -36,7 +36,10 @@ _COMMANDS = {
     "info": {"cmd"},
     "create": {"cmd", "algorithm", "policy", "credential_id"},
     "public": {"cmd", "credential_id"},
-    "sign": {"cmd", "credential_id", "operation", "rp_id", "transaction_id", "challenge", "target"},
+    "sign": {
+        "cmd", "credential_id", "operation", "rp_id", "transaction_id", "challenge", "target",
+        "revoke_target",
+    },
 }
 
 
@@ -131,6 +134,9 @@ def handle(core: SigningCore, message: dict, device_id: str = "") -> dict:
                 public_key=crypto.b64d(_text(target, "public_key")),
                 policy_hash=crypto.b64d(_text(target, "policy_hash")),
             ),
+            revoke_target=None
+            if message.get("revoke_target") is None
+            else _text(message, "revoke_target"),
         )
         signature = core.sign(_text(message, "credential_id"), request)
         return {"ok": True, "signature": crypto.b64e(signature)}
@@ -234,6 +240,7 @@ class VirtualToken:
                     "public_key": crypto.b64e(target.public_key),
                     "policy_hash": crypto.b64e(target.policy_hash),
                 },
+                "revoke_target": request.revoke_target,
             }
         )
         return crypto.b64d(reply["signature"])
