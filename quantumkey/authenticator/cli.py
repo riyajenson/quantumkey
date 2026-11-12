@@ -35,6 +35,7 @@ from quantumkey.authenticator.core import SigningRefused
 from quantumkey.authenticator.software import SoftwareSigner
 from quantumkey.authenticator.token import VirtualToken
 from quantumkey.authenticator.vault import DEFAULT_KDF, KdfParams, VaultError
+from quantumkey.protocol.policy import RECOVERY_OPS, Policy
 
 
 def _pin() -> str:
@@ -85,6 +86,10 @@ def main(argv: list[str] | None = None) -> int:
     enroll.add_argument("credential_id", help="the authorizing credential in this vault")
     enroll.add_argument("--new-vault", required=True, help="vault for the new credential")
     enroll.add_argument("--algorithm", choices=crypto.ALGORITHMS, default=crypto.DEFAULT_ALGORITHM)
+    enroll.add_argument(
+        "--recovery", action="store_true",
+        help="a recovery credential: may enroll and revoke, never log in; keep it offline",
+    )
     revoke = commands.add_parser(
         "revoke", help="revoke a credential of the account, authorized by one in this vault"
     )
@@ -151,10 +156,14 @@ def main(argv: list[str] | None = None) -> int:
                     client.logout(token)
             elif args.command == "enroll":
                 new_signer = SoftwareSigner(args.new_vault, _new_pin())
-                new_id = client.enroll(
-                    args.username, args.credential_id, signer, new_signer, args.algorithm
+                policy = (
+                    Policy(rp_id=args.rp_id, allowed_ops=RECOVERY_OPS) if args.recovery else None
                 )
-                print(f"enrolled {new_id} in {args.new_vault}")
+                new_id = client.enroll(
+                    args.username, args.credential_id, signer, new_signer, args.algorithm, policy
+                )
+                kind = " (recovery credential: keep this vault offline)" if args.recovery else ""
+                print(f"enrolled {new_id} in {args.new_vault}{kind}")
             elif args.command == "revoke":
                 client.revoke(args.username, args.authorizer_id, signer, args.target_id)
                 print(f"revoked {args.target_id}")
