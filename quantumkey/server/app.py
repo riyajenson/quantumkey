@@ -83,6 +83,22 @@ class MigrateComplete(_Body):
     new_device_id: Ident | None = None
 
 
+class EnrollStart(_Body):
+    username: Ident
+    credential_id: Ident  # the authorizing credential
+    algorithm: Algorithm = crypto.DEFAULT_ALGORITHM
+
+
+class EnrollComplete(_Body):
+    transaction_id: Ident
+    new_credential_id: Ident
+    new_public_key: Blob
+    new_policy: Blob
+    authorizer_signature: Blob
+    new_signature: Blob
+    new_device_id: Ident | None = None
+
+
 def _bearer(authorization: str | None) -> str:
     """The token from `Authorization: Bearer <token>`; anything else is treated
     like an unknown token."""
@@ -191,6 +207,25 @@ def create_app(
             _decode(body.new_public_key),
             _decode(body.new_policy),
             _decode(body.old_signature),
+            _decode(body.new_signature),
+            body.new_device_id,
+        )
+        return {"credential_id": new_id, "status": "active"}
+
+    @app.post("/auth/enroll/start")
+    def enroll_start(body: EnrollStart) -> dict:
+        return _started(
+            rp, "enroll", rp.enroll_start(body.username, body.credential_id, body.algorithm)
+        )
+
+    @app.post("/auth/enroll/complete")
+    def enroll_complete(body: EnrollComplete) -> dict:
+        new_id = rp.enroll_complete(
+            body.transaction_id,
+            body.new_credential_id,
+            _decode(body.new_public_key),
+            _decode(body.new_policy),
+            _decode(body.authorizer_signature),
             _decode(body.new_signature),
             body.new_device_id,
         )
