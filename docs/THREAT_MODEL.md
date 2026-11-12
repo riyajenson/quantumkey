@@ -33,6 +33,7 @@ Remote attacker without an account; network attacker; attacker with a copy of th
 | T-17 | Resource exhaustion through challenge flooding | Per-IP rate limit, body-size cap, purge of expired rows | `tests/server/test_limits.py` | Per process; a distributed source is not limited |
 | T-18 | Device impersonation | Device id recorded per credential for the user's and operator's information only; no decision depends on it | `test_device_identity.py` | Self-reported: any client can claim any id. Attestation would need a device key, as on a hardware token |
 | T-19 | One enrolled device removes the others | Enroll and revoke are signed by a credential and checked against its policy on the signer and the server; a policy can omit them; the last credential cannot be revoked; revocations are serialized per account | `tests/server/test_account_changes.py`, `tests/e2e/test_account_changes.py` | Devices are peers: any device whose policy allows `revoke` can remove the others, so the weakest such device bounds the account |
+| T-20 | Stolen recovery vault | The recovery credential cannot log in or migrate; its vault is PIN-protected; it is meant to be kept offline | `test_recovery_credential_replaces_every_lost_device` | With its PIN, a thief can enroll their own device and revoke the owner's: it is as powerful as any device allowed to revoke |
 
 ## 4. Explicit exclusions
 
