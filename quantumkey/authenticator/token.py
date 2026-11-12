@@ -58,7 +58,7 @@ def read_frame(stream: BinaryIO) -> dict | None:
         raise FrameError("truncated frame")
     try:
         message = json.loads(body)
-    except ValueError as exc:
+    except (ValueError, RecursionError) as exc:  # RecursionError: deeply nested JSON
         raise FrameError("invalid json") from exc
     if not isinstance(message, dict):
         raise FrameError("frame must be an object")

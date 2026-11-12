@@ -73,7 +73,8 @@ class Policy:
                 not_after=document["not_after"],
                 max_signs_per_minute=document["max_signs_per_minute"],
             )
-        except (ValueError, KeyError, TypeError) as exc:
+        # Python's json raises RecursionError, not ValueError, on deeply nested input.
+        except (ValueError, KeyError, TypeError, RecursionError) as exc:
             raise PolicyError("malformed policy") from exc
         if policy.canonical_bytes() != data:
             raise PolicyError("policy is not in canonical form")
