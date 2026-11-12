@@ -199,6 +199,10 @@ def create_app(
         username, credential_id, expires_at = rp.session_info(_bearer(authorization))
         return {"username": username, "credential_id": credential_id, "expires_at": expires_at}
 
+    @app.get("/auth/credentials")
+    def account_credentials(authorization: Annotated[str | None, Header()] = None) -> dict:
+        return {"credentials": rp.account_credentials(_bearer(authorization))}
+
     @app.post("/auth/logout")
     def logout(_: Empty, authorization: Annotated[str | None, Header()] = None) -> dict:
         rp.logout(_bearer(authorization))
