@@ -31,3 +31,5 @@
 ## Not yet covered
 
 Fuzzing of `SignedMessage.decode` and the token frame parser; load tests; a second ML-DSA implementation for cross-verification (E-03); formal protocol analysis.
+
+**Known limitation (2026-11-12).** `tests/conftest.py` closes every relying-party database engine after each test, so the server suite no longer exhausts PostgreSQL's connections (it did once it passed about 75 tests). The superseded Phase 2 test `phase2/tests/e2e/test_authenticator_to_api.py` also honours `QK_TEST_DATABASE_URL` but does not empty the database between its three parameter runs, so the second and third fail with "credential already exists" when the whole suite runs against PostgreSQL. CI runs only `tests/server` against PostgreSQL; run the Phase 2 test through `phase2/run_postgres_e2e.ps1`, which uses a fresh container.
