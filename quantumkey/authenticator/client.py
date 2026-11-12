@@ -106,30 +106,89 @@ class AuthClient:
         algorithm: str = crypto.DEFAULT_ALGORITHM,
         policy: Policy | None = None,
     ) -> str:
-        """Create a fresh credential in `new_signer`, authorized by the old one.
-        No private key is exported from either signer."""
+        """Create a fresh credential in `new_signer`, authorized by the old one,
+        which the server then revokes. No private key is exported from either signer."""
+        return self._add_credential(
+            "migrate", Operation.MIGRATE, "old_signature",
+            username, old_credential_id, old_signer, new_signer, algorithm, policy,
+        )
+
+    def enroll(
+        self,
+        username: str,
+        authorizer_id: str,
+        authorizer_signer: Signer,
+        new_signer: Signer,
+        algorithm: str = crypto.DEFAULT_ALGORITHM,
+        policy: Policy | None = None,
+    ) -> str:
+        """Add a credential in `new_signer` to the account, authorized by an
+        existing one, which stays active (ADR 0009)."""
+        return self._add_credential(
+            "enroll", Operation.ENROLL, "authorizer_signature",
+            username, authorizer_id, authorizer_signer, new_signer, algorithm, policy,
+        )
+
+    def revoke(
+        self, username: str, authorizer_id: str, authorizer_signer: Signer, target_id: str
+    ) -> str:
+        """Revoke `target_id`, authorized by another (or the same) credential of
+        the account (ADR 0009)."""
+        started = self._post(
+            "/auth/revoke/start", {"username": username, "credential_id": authorizer_id}
+        )
+        request = SignRequest(
+            operation=Operation.REVOKE,
+            rp_id=started["rp_id"],
+            transaction_id=started["transaction_id"],
+            challenge=crypto.b64d(started["challenge"]),
+            revoke_target=target_id,
+        )
+        signature = authorizer_signer.sign(authorizer_id, request)
+        result = self._post(
+            "/auth/revoke/complete",
+            {
+                "transaction_id": started["transaction_id"],
+                "target_credential_id": target_id,
+                "signature": crypto.b64e(signature),
+            },
+        )
+        return result["credential_id"]
+
+    def _add_credential(
+        self,
+        route: str,
+        operation: Operation,
+        signature_field: str,
+        username: str,
+        authorizer_id: str,
+        authorizer_signer: Signer,
+        new_signer: Signer,
+        algorithm: str,
+        policy: Policy | None,
+    ) -> str:
         policy = policy or Policy(rp_id=self.rp_id)
         started = self._post(
-            "/auth/migrate/start",
-            {"username": username, "credential_id": old_credential_id, "algorithm": algorithm},
+            f"/auth/{route}/start",
+            {"username": username, "credential_id": authorizer_id, "algorithm": algorithm},
         )
         new_id = new_credential_id()
         new_public = new_signer.create_credential(started["algorithm"], policy, new_id)
         target = MigrationTarget(
             new_id, new_public.algorithm, new_public.public_key, policy.digest()
         )
-        old_signature = old_signer.sign(
-            old_credential_id, self._request(Operation.MIGRATE, started, target)
+        authorizer_signature = authorizer_signer.sign(
+            authorizer_id, self._request(operation, started, target)
         )
         new_signature = new_signer.sign(new_id, self._request(Operation.REGISTER, started))
         self._post(
-            "/auth/migrate/complete",
+            f"/auth/{route}/complete",
             {
                 "transaction_id": started["transaction_id"],
                 "new_credential_id": new_id,
                 "new_public_key": crypto.b64e(new_public.public_key),
                 "new_policy": crypto.b64e(policy.canonical_bytes()),
-                "old_signature": crypto.b64e(old_signature),
+                signature_field: crypto.b64e(authorizer_signature),
                 "new_signature": crypto.b64e(new_signature),
                 "new_device_id": new_signer.device_id,
             },
