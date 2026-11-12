@@ -120,7 +120,13 @@ def main(argv: list[str] | None = None) -> int:
             if args.command == "register":
                 print("registered", client.register(args.username, signer, args.algorithm, invite=args.invite))
             elif args.command == "login":
-                client.login(args.username, signer, args.credential_id)
+                credential_id = args.credential_id
+                if credential_id is None:
+                    # On an enrolled device the account's oldest credential may
+                    # live elsewhere; a vault with one credential uses its own.
+                    held = signer.vault.list_credentials()
+                    credential_id = held[0].credential_id if len(held) == 1 else None
+                client.login(args.username, signer, credential_id)
                 print("login ok")
             elif args.command == "enroll":
                 new_signer = SoftwareSigner(args.new_vault, _new_pin())
