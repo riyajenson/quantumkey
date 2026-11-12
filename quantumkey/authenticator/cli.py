@@ -107,7 +107,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"error: unknown credential: {args.credential_id}", file=sys.stderr)
                 return 1
             print(f"deleted {args.credential_id} from the vault")
-            print("note: it is still active on the server, which has no revoke endpoint yet")
+            print("note: it is still active on the server; revoke it there with `revoke`")
             return 0
         if args.command == "change-pin":
             kdf = KdfParams(args.time_cost, args.memory_kib, args.parallelism)
