@@ -78,3 +78,27 @@ def test_login_from_an_enrolled_device_uses_its_own_credential(app, tmp_path, mo
     # account's oldest (the laptop's, which this vault does not hold).
     code, out, err = run(monkeypatch, capsys, ["--vault", phone, "login", "alice"], pin="2222")
     assert (code, out.strip()) == (0, "login ok"), err
+
+
+def test_devices_lists_the_accounts_credentials(app, tmp_path, monkeypatch, capsys):
+    laptop, phone = str(tmp_path / "laptop.sqlite3"), str(tmp_path / "phone.sqlite3")
+    token = app.state.rp.issue_invite("alice")
+    _, out, _ = run(monkeypatch, capsys, ["--vault", laptop, "register", "alice", "--invite", token])
+    laptop_id = out.split()[-1]
+    _, out, _ = run(
+        monkeypatch, capsys,
+        ["--vault", laptop, "enroll", "alice", laptop_id, "--new-vault", phone], new_pin="2222",
+    )
+    phone_id = out.split()[1]
+    run(monkeypatch, capsys, ["--vault", phone, "revoke", "alice", laptop_id, "--with", phone_id],
+        pin="2222")
+    code, out, err = run(monkeypatch, capsys, ["--vault", phone, "devices", "alice"], pin="2222")
+    assert code == 0, err
+    rows = {line.split()[0]: line.split()[1] for line in out.strip().splitlines()[1:]}
+    assert rows == {laptop_id: "revoked", phone_id: "active"}
+    assert "this vault" in next(line for line in out.splitlines() if line.startswith(phone_id))
+    # The session used for listing was logged out afterwards.
+    with app.state.rp.engine.connect() as connection:
+        from sqlalchemy import text
+
+        assert connection.execute(text("SELECT count(*) FROM sessions")).scalar() == 0
