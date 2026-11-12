@@ -65,3 +65,16 @@ def test_revoking_the_last_credential_is_reported(app, tmp_path, monkeypatch, ca
         monkeypatch, capsys, ["--vault", laptop, "revoke", "alice", laptop_id, "--with", laptop_id]
     )
     assert code == 1 and "last_credential" in err
+
+
+def test_login_from_an_enrolled_device_uses_its_own_credential(app, tmp_path, monkeypatch, capsys):
+    laptop, phone = str(tmp_path / "laptop.sqlite3"), str(tmp_path / "phone.sqlite3")
+    token = app.state.rp.issue_invite("alice")
+    _, out, _ = run(monkeypatch, capsys, ["--vault", laptop, "register", "alice", "--invite", token])
+    laptop_id = out.split()[-1]
+    run(monkeypatch, capsys, ["--vault", laptop, "enroll", "alice", laptop_id, "--new-vault", phone],
+        new_pin="2222")
+    # No --credential-id: the phone vault's only credential is used, not the
+    # account's oldest (the laptop's, which this vault does not hold).
+    code, out, err = run(monkeypatch, capsys, ["--vault", phone, "login", "alice"], pin="2222")
+    assert (code, out.strip()) == (0, "login ok"), err
