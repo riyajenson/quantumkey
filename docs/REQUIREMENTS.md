@@ -30,7 +30,7 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 | FR-10 | A credential can be migrated to another signer without key export; the old one is revoked | `tests/e2e/test_migration.py` |
 | FR-11 | Credentials carry a signing policy enforced by the signer | `test_signer_enforces_rate_limit_and_expiry`; `test_token_enforces_policy_for_a_malicious_host` |
 | FR-12 | Protocol and vault formats are versioned; older vaults are upgraded in place | `DOMAIN = b"QuantumKey/v1\0"`; vault `format_version`; `test_v2_vault_is_upgraded_in_place_and_still_unlocks` |
-| FR-13 | Users can revoke a credential directly | **Open** (only migration revokes) |
+| FR-13 | Users can revoke a credential directly | `revoke`, authorized by a signature of another (or the same) credential of the account; never the last one (ADR 0009, `tests/server/test_account_changes.py`) |
 | FR-14 | User presence / user verification is distinguished | **Open** |
 | FR-15 | First registration of a username requires a single-use, expiring invite issued by the operator | `tests/server/test_enrollment.py` |
 | FR-16 | Users can delete a credential from the vault and change the vault PIN | `cli delete`, `cli change-pin`; `tests/authenticator/` |
@@ -47,7 +47,7 @@ A research prototype of ML-DSA-based challenge-response authentication with a so
 | SEC-05 | Strict parsing: canonical base64url, unknown JSON fields rejected, length limits | Met |
 | SEC-06 | Never log or transmit private keys, PINs or derived keys | Met by review. No logging of secrets exists |
 | SEC-07 | Server-side rate limiting and request-size limits | Met: 60 POSTs/min per IP, 64 KB body cap, field length limits (`tests/server/test_limits.py`). Limits are per process |
-| SEC-08 | Revocation, recovery and account-recovery abuse controls | Partial (revocation through migration only) |
+| SEC-08 | Revocation, recovery and account-recovery abuse controls | Partial: signed, policy-checked enroll and revoke; the last credential cannot be revoked. No account recovery when every device is lost |
 | SEC-09 | Host, token, transport and server are treated as separate trust domains | Met in design; token is a process, not a device |
 | SEC-10 | Limitations of software key storage are documented | Met (`docs/VAULT_SPECIFICATION.md`) |
 
