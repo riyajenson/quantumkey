@@ -20,6 +20,12 @@ A canonical policy (relying party, allowed operations, expiry, rate limit) is ha
 
 The old credential signs a binding over the new credential's id, algorithm, public key and policy hash, and the new key signs a proof of possession over the same transaction. The server then atomically revokes the old and activates the new credential in one database transaction. Tests cover software to token for all three variants, denial by policy, and failure leaving the old credential active. Because the algorithm is a parameter of the new credential, the same mechanism rotates a credential to a different ML-DSA parameter set (algorithm agility through migration).
 
+### Contribution 4 — account changes as policy-checked signatures
+
+Adding and revoking credentials are signed operations of an existing credential (`enroll`, `revoke`), built by the signer from a structured request and checked against that credential's policy on the signer and the server (ADR 0009). No bearer session can change the account. This closes the gap a session-authorized "add device" would open: with sessions, add-then-revoke would migrate a credential whose policy forbids `migrate`. Tests cover the lost-device flow (a virtual token revokes the lost software credential), a token refusing `revoke` when its policy omits it, the last-credential rule, and 25 concurrent mutual revocations on PostgreSQL leaving exactly one active credential each time.
+
+**Boundary of the claim.** Enrolled devices are peers. Any device whose policy allows `revoke` can remove the others, so the account is as strong as its weakest such device.
+
 ### Evaluation (first numbers)
 
 `docs/evaluation/bench-2026-11-06.json` (20 iterations per variant, in-process HTTP, Windows, unoptimized liboqs build):
@@ -72,7 +78,7 @@ ML-DSA in FIDO2/WebAuthn is therefore **not** a novelty claim. The three contrib
 ## Known limitations
 
 - The virtual token is a process boundary, not tamper-resistant hardware, and keeps keys only in memory. `cli migrate` therefore migrates into a token that disappears when the command ends; use it to demonstrate the flow, not to keep an account.
-- No credential revocation endpoint (an account has one active credential at a time), TLS, or account recovery. Server rate limits are per process. First registration needs an operator-issued invite, which is a bearer token.
+- No TLS and no account recovery once every enrolled device is lost. Server rate limits are per process. First registration needs an operator-issued invite, which is a bearer token.
 - Server-side policy checks cover relying party, operations and expiry only.
 - Developed on Windows x64 with a Debug-configured liboqs 0.16.0 build that prints a constant-time warning. CI runs the suite on Linux with a Release build and PostgreSQL 17, and that log contains no such warning; absence of the warning is not a constant-time verification. macOS is untested; benchmarks are small (20 iterations on a shared CI VM) and not release numbers.
 - The protocol is a custom, WebAuthn-inspired design, not WebAuthn/CTAP compatible. Its message encoding and migration protocol have had no formal analysis or independent review.
