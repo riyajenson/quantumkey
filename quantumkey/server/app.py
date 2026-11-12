@@ -99,6 +99,17 @@ class EnrollComplete(_Body):
     new_device_id: Ident | None = None
 
 
+class RevokeStart(_Body):
+    username: Ident
+    credential_id: Ident  # the authorizing credential
+
+
+class RevokeComplete(_Body):
+    transaction_id: Ident
+    target_credential_id: Ident
+    signature: Blob
+
+
 def _bearer(authorization: str | None) -> str:
     """The token from `Authorization: Bearer <token>`; anything else is treated
     like an unknown token."""
@@ -230,6 +241,17 @@ def create_app(
             body.new_device_id,
         )
         return {"credential_id": new_id, "status": "active"}
+
+    @app.post("/auth/revoke/start")
+    def revoke_start(body: RevokeStart) -> dict:
+        return _started(rp, "revoke", rp.revoke_start(body.username, body.credential_id))
+
+    @app.post("/auth/revoke/complete")
+    def revoke_complete(body: RevokeComplete) -> dict:
+        target = rp.revoke_complete(
+            body.transaction_id, body.target_credential_id, _decode(body.signature)
+        )
+        return {"credential_id": target, "status": "revoked"}
 
     @app.get("/credentials/{credential_id}")
     def credential_status(credential_id: str) -> dict:
