@@ -5,11 +5,16 @@
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 list
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 migrate alice <old-credential-id>
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 delete <credential-id>
+    python -m quantumkey.authenticator.cli --vault vault.sqlite3 enroll alice <credential-id> --new-vault phone.sqlite3
+    python -m quantumkey.authenticator.cli --vault phone.sqlite3 revoke alice <lost-id> --with <credential-id>
     python -m quantumkey.authenticator.cli --vault vault.sqlite3 change-pin [--time-cost 3 --memory-kib 65536]
 
 The invite comes from the server operator (`python -m quantumkey.server.admin invite alice`).
 The PIN comes from the QK_PIN environment variable or an interactive prompt,
-and for change-pin the new PIN from QK_NEW_PIN or a prompt (asked twice).
+and for change-pin and the vault created by enroll the new PIN from
+QK_NEW_PIN or a prompt (asked twice). `enroll` adds a credential in another
+vault, authorized by one in this vault; `revoke` revokes any credential of the
+account, authorized by one in this vault (ADR 0009).
 `migrate` creates the new credential inside a virtual token process, so it
 only demonstrates the flow within a single command (the token does not persist).
 """
@@ -62,6 +67,20 @@ def main(argv: list[str] | None = None) -> int:
     migrate = commands.add_parser("migrate")
     migrate.add_argument("username")
     migrate.add_argument("credential_id")
+    enroll = commands.add_parser(
+        "enroll", help="add a credential in another vault, authorized by one in this vault"
+    )
+    enroll.add_argument("username")
+    enroll.add_argument("credential_id", help="the authorizing credential in this vault")
+    enroll.add_argument("--new-vault", required=True, help="vault for the new credential")
+    enroll.add_argument("--algorithm", choices=crypto.ALGORITHMS, default=crypto.DEFAULT_ALGORITHM)
+    revoke = commands.add_parser(
+        "revoke", help="revoke a credential of the account, authorized by one in this vault"
+    )
+    revoke.add_argument("username")
+    revoke.add_argument("target_id", help="the credential to revoke")
+    revoke.add_argument("--with", dest="authorizer_id", required=True,
+                        help="the authorizing credential in this vault")
     delete = commands.add_parser("delete", help="delete a credential from this vault")
     delete.add_argument("credential_id")
     change_pin = commands.add_parser(
@@ -103,6 +122,15 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == "login":
                 client.login(args.username, signer, args.credential_id)
                 print("login ok")
+            elif args.command == "enroll":
+                new_signer = SoftwareSigner(args.new_vault, _new_pin())
+                new_id = client.enroll(
+                    args.username, args.credential_id, signer, new_signer, args.algorithm
+                )
+                print(f"enrolled {new_id} in {args.new_vault}")
+            elif args.command == "revoke":
+                client.revoke(args.username, args.authorizer_id, signer, args.target_id)
+                print(f"revoked {args.target_id}")
             elif args.command == "migrate":
                 with VirtualToken() as token:
                     new_id = client.migrate(
