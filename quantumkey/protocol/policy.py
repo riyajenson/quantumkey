@@ -21,12 +21,12 @@ class PolicyError(ValueError):
 @dataclass(frozen=True)
 class Policy:
     rp_id: str
-    allowed_ops: tuple[str, ...] = ("register", "login", "migrate")
+    allowed_ops: tuple[str, ...] = ("register", "login", "migrate", "enroll", "revoke")
     not_after: int | None = None  # unix seconds; None means no expiry
     max_signs_per_minute: int = 30
 
     def __post_init__(self) -> None:
-        valid = {"register", "login", "migrate"}
+        valid = {op.name.lower() for op in Operation}
         # Reject type confusion explicitly (JSON true == 1, 1.5, non-strings...).
         if not isinstance(self.rp_id, str):
             raise PolicyError("rp_id must be a string")
@@ -45,7 +45,7 @@ class Policy:
         if not self.rp_id:
             raise PolicyError("rp_id is required")
         if not self.allowed_ops or not set(self.allowed_ops) <= valid:
-            raise PolicyError("allowed_ops must be a non-empty subset of register/login/migrate")
+            raise PolicyError(f"allowed_ops must be a non-empty subset of {sorted(valid)}")
         if self.max_signs_per_minute < 1:
             raise PolicyError("max_signs_per_minute must be positive")
 
